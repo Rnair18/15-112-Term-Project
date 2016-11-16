@@ -10,6 +10,7 @@ from comtypes.client import CreateObject
 
 #Modified from Stackoverflow source
 def stringToWav(s,fileName):
+    #Default bit rate is 22050
     fileName = fileName+".wav"
     engine = CreateObject("SAPI.SpVoice")
     stream = CreateObject("SAPI.SpFileStream")
@@ -22,10 +23,10 @@ def stringToWav(s,fileName):
 def getWavData(fileName):
     fileName+=".wav"
     data = scipy.io.wavfile.read(fileName)
-    return data[1]
-def writeWavFile(wavData,fileName):
+    return (data[0],data[1])
+def writeWavFile(wavData,fileName,bitrate = 22050):
     fileName+=".wav"
-    scipy.io.wavfile.write(fileName,22050,wavData)  
+    scipy.io.wavfile.write(fileName,bitrate,wavData)  
 
     
 def playWav(fileName):
@@ -85,14 +86,13 @@ class ComplexNumber(object):
         return newComplexNum
 
 def fastFourierTransform(wavData):
+    https://www.youtube.com/watch?v=6-llh6WJo1U#t=551.314916
     fundamentalFrequency = 2*math.pi
     
     print(fundamentalFrequency)
 
 def test():
-    data = getWavData("testing4")
-    fastFourierTransform(data)
-    stringToWav("Hello There","temp")
+    
 
 test()
 
