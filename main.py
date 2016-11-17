@@ -86,12 +86,14 @@ class ComplexNumber(object):
         return newComplexNum
 
 def fastFourierTransform(wavData):
-    https://www.youtube.com/watch?v=6-llh6WJo1U#t=551.314916
+    #https://www.youtube.com/watch?v=6-llh6WJo1U#t=551.314916
     fundamentalFrequency = 2*math.pi
     
     print(fundamentalFrequency)
 
 def test():
+    stringToWav("Denzel and Mihir sitting in a tree, K I S S I N G","weird")
+    playWav("weird")
     
 
 test()
