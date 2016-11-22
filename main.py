@@ -134,6 +134,9 @@ def changeWavFileSpeed(fileName,multiplier):
     bitRate = getBitRate(fileName)
     writeWavFile(data,fileName,bitRate*multiplier)
 
+    
+#@TODO
+#Some bug in wavData transformtaion
 def changeFrequency(wavData,modulationAdder):
     for i in range(len(wavData)):
         wavData[i][0] = wavData[i][0]+modulationAdder
