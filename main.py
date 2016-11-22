@@ -37,8 +37,7 @@ def getWavData(fileName):
     data = scipy.io.wavfile.read(fileName)
     return data[1]
 def writeWavFile(wavData,fileName,bitrate = 22050):
-    scipy.io.wavfile.write(fileName,bitrate,wavData)  
-    
+    scipy.io.wavfile.write(fileName,bitrate,wavData)    
 def getBitRate(fileName):
     data = scipy.io.wavfile.read(fileName)
     return data[0]
@@ -82,7 +81,8 @@ def changeVolume(fileName,multiplier=3):
     data = getWavData(fileName)
     for i in range(len(data)):
         data[i] = data[i]*multiplier
-    writeWavFile(data,fileName)
+    bitRate = getBitRate(fileName)
+    writeWavFile(data,fileName,bitRate)
 
 #Helper function for fourierTranform
 #Loops through lists and multiplies contents of each and then adds them
@@ -99,7 +99,7 @@ def addEachElement(transform,wavData):
 #Applies fourier transformation for waveData
 def fourierTransform(wavData):
     #https://www.youtube.com/watch?v=6-llh6WJo1U#t=551.314916
-    #Video discusses fourier transformation math
+    #Video discusses fourier transformation math link from there as well
     fundamentalFrequency = -2*math.pi
     dimensions = wavData.shape
     rowLength = dimensions[0]
@@ -117,7 +117,7 @@ def fourierTransform(wavData):
     return numpy.asarray(resultList) #change into numpy array
 
 def inverseFourierTransform(wavData):
-    #same formula as above except with fundamental frequency...
+    #same formula as above except with positive fundamental frequency...
     fundamentalFrequency = 2*math.pi
     dimensions = wavData.shape
     rowLength = dimensions[0]
@@ -129,21 +129,23 @@ def inverseFourierTransform(wavData):
     resultList = addEachElement(transform,wavData)
     return numpy.asarray(resultList)
 
+#Slow down or speed up wave file depending on multiplier >1 or <1
 def changeWavFileSpeed(fileName,multiplier):
     data = getWavData(fileName)
     bitRate = getBitRate(fileName)
     writeWavFile(data,fileName,bitRate*multiplier)
-
     
 #@TODO
-#Some bug in wavData transformtaion
+#Some bug in wavData transformtaion WORKINPROGRESS
 def changeFrequency(wavData,modulationAdder):
     for i in range(len(wavData)):
         wavData[i][0] = wavData[i][0]+modulationAdder
     return wavData
 
-
+changeWavFileSpeed("originalRecordVoice - Copy (2).wav",0.5)
     
+#@IGNORE
+#personal test code
 #data = getWavData("output")
 #bitRate = getBitRate("output")
 ##print(data)
@@ -167,11 +169,5 @@ def changeFrequency(wavData,modulationAdder):
 #playWav("output2")
 
 
-playWav("output2.wav")
-changeWavFileSpeed("output2.wav",2)
-playWav("output2.wav")
-
-
-    
 
     
