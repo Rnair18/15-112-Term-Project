@@ -1,9 +1,12 @@
-from numpy import *
+import numpy
 import scipy
-from scipy.io.wavfile import read
-from scipy.io.wavfile import write
 import math
 import winsound
+import pyaudio
+import wave
+
+#from scipy.io.wavfile import read
+#from scipy.io.wavfile import write
 from comtypes.gen import SpeechLib
 
 from comtypes.client import CreateObject
@@ -38,10 +41,6 @@ def increaseVolume(fileName,multiplier=3):
         data[i] = data[i]*multiplier
     writeWavFile(data,fileName)
     
-def builtInFFT(wavData):
-    data = fft.rfft(wavData)
-    return data
-    
 class ComplexNumber(object):    
     def __init__(self,real,imaginary):
         self.real = real
@@ -54,7 +53,7 @@ class ComplexNumber(object):
         else:
             return "%f" %(float(self.real))       
     def add(self,other):
-        if(isinstance(other,Complex)):
+        if(isinstance(other,ComplexNumber)):
             newReal = self.real+other.real
             newImaginary = self.imaginary+other.imaginary
             newComplexNum = ComplexNumber(newReal,newImaginary)
@@ -66,7 +65,7 @@ class ComplexNumber(object):
         else:
             return None
     def multiply(self,other):
-        if (isinstance(other,Complex)):
+        if (isinstance(other,ComplexNumber)):
             newReal = self.real*other.real-self.imaginary*other.imaginary
             newImaginary = self.real*other.imaginary+self.imaginary*other.real
             newComplexNum = ComplexNumber(newReal,newImaginary)
@@ -83,20 +82,73 @@ class ComplexNumber(object):
         return result
     def getCopy(self):
         newComplexNum = ComplexNumber(self.real,self.imaginary)
-        return newComplexNum
+        return newComplexNum  
 
-def fastFourierTransform(wavData):
+def recordAudio(seconds,fileName,bitRate = 22050*2):
+    #modified from pyaudio documentation website
+    chunk = 1024 #number of samples in stream
+    fileName = fileName+".wav"
+    numChannels = 2 #stereo
+    formatPyaudio = pyaudio.paInt24 #3bytes
+    audioInstance = pyaudio.PyAudio()
+    stream = audioInstance.open(format = formatPyaudio, channels = numChannels,
+                                rate = bitRate, input=True,
+                                frames_per_buffer=chunk)
+    print("Starting Recording for %d seconds!") %(seconds)
+    
+    frames = []
+    
+    for i in range(0, int(bitRate/chunk*seconds)):
+        data = stream.read(chunk)
+        frames.append(data)
+        #each data is a wierd string value
+    print("Finished Recording!")
+    stream.stop_stream()
+    stream.close()
+    audioInstance.terminate()
+    
+    #Using wave module creates wav file
+    waveFile = wave.open(fileName, 'wb')
+    waveFile.setnchannels(numChannels)
+    waveFile.setsampwidth(audioInstance.get_sample_size(formatPyaudio))
+    waveFile.setframerate(bitRate)
+    waveFile.writeframes(b''.join(frames))
+    waveFile.close()
+
+def addBoth(transform,wavData):
+    newList = []
+    for i in range(len(transform)):
+        summer = 0
+        for dataIndex in range(len(wavData)):
+            summer+=transform[i][dataIndex]*wavData[dataIndex]
+        newList.append(summer)
+    return newList
+        
+    
+
+def fourierTransform(wavData):
     #https://www.youtube.com/watch?v=6-llh6WJo1U#t=551.314916
-    fundamentalFrequency = 2*math.pi
+    #link from there as well
+    fundamentalFrequency = -2*math.pi
+    wavData = numpy.asarray(wavData, dtype=float)
+    dimension = wavData.shape
+    rowLength = dimension[0]
+    newList = numpy.arange(rowLength)
+    k = newList.reshape((rowLength, 1))
+    transform = numpy.exp(fundamentalFrequency * k * newList/ rowLength)
+    return numpy.asarray(addBoth(transform,wavData))
     
-    print(fundamentalFrequency)
+#data = getWavData("testing4") #lenght is 51910
+#data = data[1][10000:10010]
+#print(data)
+#print(fft.rfft(data))
+#print(fourierTransform(data))
+print("Testing")
+#recordAudio(5,"output")
 
-def test():
-    stringToWav("Denzel and Mihir sitting in a tree, K I S S I N G","weird")
-    playWav("weird")
-    
+#
 
-test()
+#
 
     
 
