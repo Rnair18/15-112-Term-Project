@@ -24,7 +24,6 @@ from comtypes.client import CreateObject
 #/how-can-i-convert-text-to-speech-mp3-file-in-python
 def stringToWav(s,fileName):
     #Default bit rate is 22050
-    fileName = fileName+".wav"
     engine = CreateObject("SAPI.SpVoice")
     stream = CreateObject("SAPI.SpFileStream")
     stream.Open(fileName, SpeechLib.SSFMCreateForWrite)
@@ -35,18 +34,19 @@ def stringToWav(s,fileName):
 #Modified from powerpoint
 #http://www.slideshare.net/mchua/sigproc-selfstudy-17323823
 def getWavData(fileName):
-    fileName+=".wav"
     data = scipy.io.wavfile.read(fileName)
     return data[1]
 def writeWavFile(wavData,fileName,bitrate = 22050):
-    fileName+=".wav"
     scipy.io.wavfile.write(fileName,bitrate,wavData)  
+    
+def getBitRate(fileName):
+    data = scipy.io.wavfile.read(fileName)
+    return data[0]
     
 #Record input from microphone for given amount of seconds
 #Modified from pyaudio documentation website and stackoverflow website
 def recordAudio(seconds,fileName,bitRate = 22050*2):    
     chunk = 1024 #number of samples in stream
-    fileName = fileName+".wav"
     numChannels = 2 #stereo
     formatPyaudio = pyaudio.paInt32 #3 bytes
     audioInstance = pyaudio.PyAudio()
@@ -75,7 +75,6 @@ def recordAudio(seconds,fileName,bitRate = 22050*2):
 #Use winsound to play wav file
 #From winsound documentation
 def playWav(fileName):
-    fileName = fileName+".wav"
     winsound.PlaySound(fileName,winsound.SND_FILENAME)
 
 #Take wave file, change volume and rewrite
@@ -130,36 +129,44 @@ def inverseFourierTransform(wavData):
     resultList = addEachElement(transform,wavData)
     return numpy.asarray(resultList)
 
+def changeWavFileSpeed(fileName,multiplier):
+    data = getWavData(fileName)
+    bitRate = getBitRate(fileName)
+    writeWavFile(data,fileName,bitRate*multiplier)
+
 def changeFrequency(wavData,modulationAdder):
     for i in range(len(wavData)):
         wavData[i][0] = wavData[i][0]+modulationAdder
-        wavData[i][0] = wavData[i][0]+modulationAdder
+    return wavData
 
 
     
-data = getWavData("output")
-#data = data[0:10]
-#f = fourierTransform(data)
-#print(f)
-#f = inverseFourierTransform(f)
-#print(f)
+#data = getWavData("output")
+#bitRate = getBitRate("output")
+##print(data)
 #print("\n")
-#changeFrequency(f,30)
-print(data)
-print("\n")
-f = numpy.fft.rfft(data)
-print(f)
-changeFrequency(f,30)
-print(f)
-print("\n")
-f = numpy.fft.irfft(data)
-for ele in f:
-    f[0] = int(f[0])
-    f[1] = int(f[1])    
-print(f)
-#newWavData = inverseFourierTransform(f)
-writeWavFile(f,"output2",28220)
-playWav("output2")
+#
+#f = numpy.fft.rfft(data)
+#print(f)
+#f1 = changeFrequency(f,4000)
+#print(f1)
+#data = numpy.fft.irfft(f1)
+#
+##for i in range(len(data)):
+#    #x = data[i][0]
+#    #y = data[i][1]
+#    #data[i][0] = 5
+#    #data[i][1] = 5
+#data = data.astype(numpy.int32)
+##print(data)
+#writeWavFile(data,"output2",bitRate)
+#playWav("output")
+#playWav("output2")
+
+
+playWav("output2.wav")
+changeWavFileSpeed("output2.wav",2)
+playWav("output2.wav")
 
 
     
