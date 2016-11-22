@@ -1,0 +1,5 @@
+Critique - 11/22/16
+1. Interesting idea - use data predict other sounds and future words such as dog or doggo
+2. Try to find social good, pronounciation, speak in natural dialect
+3. Fix accents and demonstrate user how to speak by comparing thier voice with 
+4. speech recognition - very doable, greet user by person

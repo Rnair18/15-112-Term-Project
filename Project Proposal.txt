@@ -1,0 +1,7 @@
+Project Proposal
+
+Speech recognition is a technology that is used in almost all modern day cellphones, tablets, and computers. Many of these devices unlocks or greets a user based on recognition of a certain key phrase or word. Yet imagine if the math and signal processing behind these technologies were put to other uses...such as helping others learn to speak?
+
+We live in a global network where people from all over the world come together to work together on term projects. In order to contribute effectively, communication is key tool. However with English many people have a hard time pronounciating certain word. My project aims to address this issue in a relatively simple manner. Using pyaudio, the program can provide a word for the user to say, and will record that data in a wav file. It will then have an artificial voice (comtypes module) to generate the same word and will save that in a wav file as well. Then using signal processing techniques, I can compare the person's voice to the artificial voice and it can tell where there is a discrepency and potentially tell the user where they need to fix their pronounciation. The latter processing techniques will use arrays from numpy and data from wave files using scipy modules.
+
+This in turn can help people with understanding how to pronounce words depending on their background accents and languages.
