@@ -5,8 +5,9 @@ import winsound
 import pyaudio
 import wave
 
-#from scipy.io.wavfile import read
-#from scipy.io.wavfile import write
+from scipy.io.wavfile import read
+from scipy.io.wavfile import write
+
 from comtypes.gen import SpeechLib
 
 from comtypes.client import CreateObject
@@ -26,7 +27,7 @@ def stringToWav(s,fileName):
 def getWavData(fileName):
     fileName+=".wav"
     data = scipy.io.wavfile.read(fileName)
-    return (data[0],data[1])
+    return data[1]
 def writeWavFile(wavData,fileName,bitrate = 22050):
     fileName+=".wav"
     scipy.io.wavfile.write(fileName,bitrate,wavData)  
@@ -89,7 +90,7 @@ def recordAudio(seconds,fileName,bitRate = 22050*2):
     chunk = 1024 #number of samples in stream
     fileName = fileName+".wav"
     numChannels = 2 #stereo
-    formatPyaudio = pyaudio.paInt24 #3bytes
+    formatPyaudio = pyaudio.paInt32 #3bytes
     audioInstance = pyaudio.PyAudio()
     stream = audioInstance.open(format = formatPyaudio, channels = numChannels,
                                 rate = bitRate, input=True,
@@ -123,16 +124,19 @@ def addBoth(transform,wavData):
             summer+=transform[i][dataIndex]*wavData[dataIndex]
         newList.append(summer)
     return newList
-        
-    
+            
 
 def fourierTransform(wavData):
     #https://www.youtube.com/watch?v=6-llh6WJo1U#t=551.314916
     #link from there as well
     fundamentalFrequency = -2*math.pi
-    wavData = numpy.asarray(wavData, dtype=float)
     dimension = wavData.shape
     rowLength = dimension[0]
+    if (rowLength>30):
+        return None
+    wavData = numpy.asarray(wavData, dtype=float) #Convert wave data into
+                                                  #numpy array
+    
     newList = numpy.arange(rowLength)
     k = newList.reshape((rowLength, 1))
     transform = numpy.exp(fundamentalFrequency * k * newList/ rowLength)
@@ -145,6 +149,8 @@ def fourierTransform(wavData):
 #print(fourierTransform(data))
 print("Testing")
 #recordAudio(5,"output")
+data = getWavData("testing4")
+print(fourierTransform(data))
 
 #
 
