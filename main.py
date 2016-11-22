@@ -1,3 +1,8 @@
+#Roshan Nair
+#rsnair
+#Term Project - Voice Modulation
+
+#Main Modules
 import numpy
 import scipy
 import math
@@ -5,14 +10,18 @@ import winsound
 import pyaudio
 import wave
 
+#Key Functions from scipy module for wave file reading, writing
 from scipy.io.wavfile import read
 from scipy.io.wavfile import write
 
+#Comtypes module for generating artificial voice
 from comtypes.gen import SpeechLib
-
 from comtypes.client import CreateObject
 
-#Modified from Stackoverflow source
+#Comtypes for artifical voice
+#Modified to work with wav files and custom strings from Stackoverflow source
+#http://stackoverflow.com/questions/15516572
+#/how-can-i-convert-text-to-speech-mp3-file-in-python
 def stringToWav(s,fileName):
     #Default bit rate is 22050
     fileName = fileName+".wav"
@@ -24,6 +33,7 @@ def stringToWav(s,fileName):
     stream.Close()
 
 #Modified from powerpoint
+#http://www.slideshare.net/mchua/sigproc-selfstudy-17323823
 def getWavData(fileName):
     fileName+=".wav"
     data = scipy.io.wavfile.read(fileName)
@@ -31,80 +41,26 @@ def getWavData(fileName):
 def writeWavFile(wavData,fileName,bitrate = 22050):
     fileName+=".wav"
     scipy.io.wavfile.write(fileName,bitrate,wavData)  
-
     
-def playWav(fileName):
-    fileName = fileName+".wav"
-    winsound.PlaySound(fileName,winsound.SND_FILENAME)
-def increaseVolume(fileName,multiplier=3):
-    data = getWavData(fileName)
-    for i in range(len(data)):
-        data[i] = data[i]*multiplier
-    writeWavFile(data,fileName)
-    
-class ComplexNumber(object):    
-    def __init__(self,real,imaginary):
-        self.real = real
-        self.imaginary = imaginary
-    def __repr__(self):
-        if (self.imaginary<0):
-            return "%f-%fj" %(float(self.real),float(self.imaginary))
-        elif(self.imaginary>0):
-            return "%f+%fj" %(float(self.real),float(self.imaginary))
-        else:
-            return "%f" %(float(self.real))       
-    def add(self,other):
-        if(isinstance(other,ComplexNumber)):
-            newReal = self.real+other.real
-            newImaginary = self.imaginary+other.imaginary
-            newComplexNum = ComplexNumber(newReal,newImaginary)
-            return newComplexNum
-        elif(isinstance(other,int) or isinstance(other,float)):
-            newReal = self.real+other
-            newImaginary = self.imaginary
-            newComplexNum = ComplexNumber(newReal, newImaginary)
-        else:
-            return None
-    def multiply(self,other):
-        if (isinstance(other,ComplexNumber)):
-            newReal = self.real*other.real-self.imaginary*other.imaginary
-            newImaginary = self.real*other.imaginary+self.imaginary*other.real
-            newComplexNum = ComplexNumber(newReal,newImaginary)
-            return newComplexNum
-        elif(isinstance(other,int) or isinstance(other,float)):
-            newReal = self.real*other
-            newImaginary = self.imaginary*other
-            newComplexNum = ComplexNumber(newReal,newImaginary)
-            return newComplexNum
-        else:
-            return None
-    def getMagnitude(self):
-        result = math.sqrt(self.real**2+self.imaginary**2)
-        return result
-    def getCopy(self):
-        newComplexNum = ComplexNumber(self.real,self.imaginary)
-        return newComplexNum  
-
-def recordAudio(seconds,fileName,bitRate = 22050*2):
-    #modified from pyaudio documentation website
+#Record input from microphone for given amount of seconds
+#Modified from pyaudio documentation website and stackoverflow website
+def recordAudio(seconds,fileName,bitRate = 22050*2):    
     chunk = 1024 #number of samples in stream
     fileName = fileName+".wav"
     numChannels = 2 #stereo
-    formatPyaudio = pyaudio.paInt32 #3bytes
+    formatPyaudio = pyaudio.paInt32 #3 bytes
     audioInstance = pyaudio.PyAudio()
     stream = audioInstance.open(format = formatPyaudio, channels = numChannels,
                                 rate = bitRate, input=True,
                                 frames_per_buffer=chunk)
-    print("Starting Recording for %d seconds!") %(seconds)
-    
-    frames = []
-    
+    print("Starting Recording for %d seconds!") %(seconds)    
+    frames = []    
     for i in range(0, int(bitRate/chunk*seconds)):
-        data = stream.read(chunk)
+        data = stream.read(chunk) #!?pyaudio encodes data values into string
         frames.append(data)
-        #each data is a wierd string value
     print("Finished Recording!")
-    stream.stop_stream()
+    
+    stream.stop_stream() #Close stream for microphone
     stream.close()
     audioInstance.terminate()
     
@@ -114,9 +70,25 @@ def recordAudio(seconds,fileName,bitRate = 22050*2):
     waveFile.setsampwidth(audioInstance.get_sample_size(formatPyaudio))
     waveFile.setframerate(bitRate)
     waveFile.writeframes(b''.join(frames))
-    waveFile.close()
+    waveFile.close()    
+    
+#Use winsound to play wav file
+#From winsound documentation
+def playWav(fileName):
+    fileName = fileName+".wav"
+    winsound.PlaySound(fileName,winsound.SND_FILENAME)
 
-def addBoth(transform,wavData):
+#Take wave file, change volume and rewrite
+def changeVolume(fileName,multiplier=3):
+    data = getWavData(fileName)
+    for i in range(len(data)):
+        data[i] = data[i]*multiplier
+    writeWavFile(data,fileName)
+
+#Helper function for fourierTranform
+#Loops through lists and multiplies contents of each and then adds them
+#Essentially dot product with lists instead of vectors
+def addEachElement(transform,wavData):
     newList = []
     for i in range(len(transform)):
         summer = 0
@@ -124,37 +96,71 @@ def addBoth(transform,wavData):
             summer+=transform[i][dataIndex]*wavData[dataIndex]
         newList.append(summer)
     return newList
-            
-
+    
+#Applies fourier transformation for waveData
 def fourierTransform(wavData):
     #https://www.youtube.com/watch?v=6-llh6WJo1U#t=551.314916
-    #link from there as well
+    #Video discusses fourier transformation math
     fundamentalFrequency = -2*math.pi
-    dimension = wavData.shape
-    rowLength = dimension[0]
-    if (rowLength>30):
-        return None
-    wavData = numpy.asarray(wavData, dtype=float) #Convert wave data into
-                                                  #numpy array
-    
+    dimensions = wavData.shape
+    rowLength = dimensions[0]
+    if (rowLength>30): #To prevent long lengths of wavData as it not optimized
+        return None    #yet.
+        
+    #wavData = numpy.asarray(wavData, dtype=float) #Convert wave data into
+                                                  #numpy array    
+    newList = numpy.arange(rowLength) #act as summation from 0 to rowLength-1
+    k = newList.reshape((rowLength, 1)) #k in formula
+    fourierTransformationExponent = (1j*fundamentalFrequency*k
+                                    *newList/rowLength)
+    transform = numpy.exp(fourierTransformationExponent) #e to the exponent
+    resultList = addEachElement(transform,wavData)
+    return numpy.asarray(resultList) #change into numpy array
+
+def inverseFourierTransform(wavData):
+    #same formula as above except with fundamental frequency...
+    fundamentalFrequency = 2*math.pi
+    dimensions = wavData.shape
+    rowLength = dimensions[0]
     newList = numpy.arange(rowLength)
     k = newList.reshape((rowLength, 1))
-    transform = numpy.exp(fundamentalFrequency * k * newList/ rowLength)
-    return numpy.asarray(addBoth(transform,wavData))
+    fourierTransformationExponent = (1j*fundamentalFrequency*k
+                                    *newList/rowLength)
+    transform = numpy.exp(fourierTransformationExponent)
+    resultList = addEachElement(transform,wavData)
+    return numpy.asarray(resultList)
+
+def changeFrequency(wavData,modulationAdder):
+    for i in range(len(wavData)):
+        wavData[i][0] = wavData[i][0]+modulationAdder
+        wavData[i][0] = wavData[i][0]+modulationAdder
+
+
     
-#data = getWavData("testing4") #lenght is 51910
-#data = data[1][10000:10010]
-#print(data)
-#print(fft.rfft(data))
-#print(fourierTransform(data))
-print("Testing")
-#recordAudio(5,"output")
-data = getWavData("testing4")
-print(fourierTransform(data))
+data = getWavData("output")
+#data = data[0:10]
+#f = fourierTransform(data)
+#print(f)
+#f = inverseFourierTransform(f)
+#print(f)
+#print("\n")
+#changeFrequency(f,30)
+print(data)
+print("\n")
+f = numpy.fft.rfft(data)
+print(f)
+changeFrequency(f,30)
+print(f)
+print("\n")
+f = numpy.fft.irfft(data)
+for ele in f:
+    f[0] = int(f[0])
+    f[1] = int(f[1])    
+print(f)
+#newWavData = inverseFourierTransform(f)
+writeWavFile(f,"output2",28220)
+playWav("output2")
 
-#
-
-#
 
     
 
