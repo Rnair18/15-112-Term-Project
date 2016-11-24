@@ -135,14 +135,20 @@ def changeWavFileSpeed(fileName,multiplier):
     bitRate = getBitRate(fileName)
     writeWavFile(data,fileName,bitRate*multiplier)
     
+#From notes to read files
+def readFile(path):
+    with open(path, "rt") as f:
+        return f.read()
+    
 #@TODO
 #Some bug in wavData transformtaion WORKINPROGRESS
 def changeFrequency(wavData,modulationAdder):
     for i in range(len(wavData)):
         wavData[i][0] = wavData[i][0]+modulationAdder
     return wavData
-
-changeWavFileSpeed("originalRecordVoice - Copy (2).wav",0.5)
+    
+s = readFile("cmudict.dict")
+print(s[:20])
     
 #@IGNORE
 #personal test code
