@@ -9,6 +9,7 @@ import math
 import winsound
 import pyaudio
 import wave
+import random
 
 #Key Functions from scipy module for wave file reading, writing
 from scipy.io.wavfile import read
@@ -146,9 +147,28 @@ def changeFrequency(wavData,modulationAdder):
     for i in range(len(wavData)):
         wavData[i][0] = wavData[i][0]+modulationAdder
     return wavData
+
+def generateWordAndPronounceList():
+    fullString = readFile("cmudict.dict")
+    stringList = fullString.split("\n")
+    return stringList
+def getRandomWordAndPronounce(wordList):
+    randomNumber = random.randint(0,len(wordList))
+    s = wordList[randomNumber]
+    return s
+def getWordPronounceTuple(fullString):
+    index = fullString.find(" ")
+    if (index==-1):
+        return None
+    wordString = fullString[:index]
+    pronounceString = fullString[index+1:]
+    return (wordString,pronounceString)
+
     
-s = readFile("cmudict.dict")
-print(s[:20])
+stringList = generateWordAndPronounceList()
+rando = getRandomWordAndPronounce(stringList)
+print(getWordPronounceTuple(rando))
+
     
 #@IGNORE
 #personal test code
