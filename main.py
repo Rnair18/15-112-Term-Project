@@ -10,7 +10,7 @@ import winsound
 import pyaudio
 import wave
 import random
-from tkinter import *
+from Tkinter import *
 
 #Key Functions from scipy module for wave file reading, writing
 from scipy.io.wavfile import read
@@ -166,9 +166,25 @@ def getWordPronounceTuple(fullString):
     return (wordString,pronounceString)
 
 
-#Event Runner
-def init(data):
-    pass
+    
+def drawWelcome(canvas,data):
+    fontSize = 25
+    b = Button(canvas,text="test")
+    canvas.create_rectangle(0,0,data.width,data.height,fill="white")
+    canvas.create_text(data.width//2,data.height//2,
+                       text = "Welcome to *insert Title",
+                       font="MSerif %d" %(fontSize),
+                       anchor = S)
+    canvas.create_text(0,data.height,text = "Instructions",
+                       font = "MSerif %d" %(fontSize),anchor=SW)
+    canvas.create_text(data.width//2,data.height,text = "Begin!",
+                       font = "MSerif %d" %(fontSize),anchor = S)
+    canvas.create_text(data.width,data.height,text = "Exit")
+    
+def init(root,data):
+    data.screen = "welcome"
+    data.allWordList = generateWordAndPronounceList()
+    
 
 def mousePressed(event, data):
     pass
@@ -180,14 +196,14 @@ def timerFired(data):
     pass
 
 def redrawAll(canvas, data):
-    pass
+    if (data.screen == "welcome"):
+        drawWelcome(canvas,data)
+        
 
 
 def run(width=300, height=300):
     def redrawAllWrapper(canvas, data):
         canvas.delete(ALL)
-        canvas.create_rectangle(0, 0, data.width, data.height,
-                                fill='white', width=0)
         redrawAll(canvas, data)
         canvas.update()    
 
@@ -202,30 +218,35 @@ def run(width=300, height=300):
     def timerFiredWrapper(canvas, data):
         timerFired(data)
         redrawAllWrapper(canvas, data)
-        # pause, then call timerFired again
         canvas.after(data.timerDelay, timerFiredWrapper, canvas, data)
-    # Set up data and call init
     class Struct(object): pass
     data = Struct()
     data.width = width
     data.height = height
-    data.timerDelay = 100 # milliseconds
-    init(data)
-    # create the root and the canvas
+    data.timerDelay = 100
     root = Tk()
     canvas = Canvas(root, width=data.width, height=data.height)
+    init(root,data)
     canvas.pack()
-    # set up events
+
     root.bind("<Button-1>", lambda event:
                             mousePressedWrapper(event, canvas, data))
     root.bind("<Key>", lambda event:
                             keyPressedWrapper(event, canvas, data))
     timerFiredWrapper(canvas, data)
-    # and launch the app
-    root.mainloop()  # blocks until window is closed
-    print("bye!")
+    root.mainloop()
+    print("Closed!")
 
-run(400, 200)
+
+
+def initiateMain():
+    width = 1000
+    height = 1000
+    run(width,height)
+
+initiateMain()
+    
+    
     
 #@IGNORE
 #personal test code
@@ -250,6 +271,10 @@ run(400, 200)
 #writeWavFile(data,"output2",bitRate)
 #playWav("output")
 #playWav("output2")
+
+
+
+
 
 
 
