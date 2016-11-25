@@ -171,6 +171,7 @@ def initiateWordandPronounce(data):
     randomWordandPro = getRandomWordAndPronounce(data.allWordList)
     (data.currentWord,data.currentPronounce)=getWordPronounceTuple(
                                              randomWordandPro)
+    stringToWav(data.currentWord,"artificalVoice.wav")
 
 def drawWelcome(canvas,data):
     fontSize = 60
@@ -194,17 +195,30 @@ def drawInstruction(canvas,data):
 
 def drawBegin(canvas,data):
     fontSizeInstruct = 40
-    fontSizeMainWord = 60
+    fontSizeMainWord = 70
+    heightScale = 0.75
     beginText = "Clearly say the word below."
     canvas.create_text(data.width/2,0,text=beginText,
                        anchor=N,font="MSerif %d" %(fontSizeInstruct))
     canvas.create_text(data.width/2,data.height/2,text=data.currentWord,
-                       anchor=S,font="MSerif %d" %(fontSizeMainWord))
+                       anchor=S,font="MSerif %d" %(fontSizeMainWord),
+                       fill=data.wordColor)
     canvas.create_window(0,data.height,window=data.instructionButton,
                          anchor=SW)
     canvas.create_window(data.width/2,data.height,window=data.backButton,
                          anchor=S)
-    #canvas.create_window(data.width)
+    canvas.create_window(data.width,data.height,window=data.randomButton,
+                         anchor=SE)
+    if (not data.recording):
+        canvas.create_window(data.width/2,data.height*heightScale,
+                             window=data.recordButton,anchor=N)
+    elif(data.countDown>0):
+        canvas.create_text(data.width/2,data.height*heightScale,
+                           text="%d..." %data.countDown,
+                           font="MSerif %d" %(fontSizeInstruct))
+    else:
+        canvas.create_text(data.width/2,data.height*heightScale,
+                           text="Begin!",font="MSerif %d" %(fontSizeInstruct))
     
 def callInstruction(data):
     data.originalScreen = data.screen
@@ -217,11 +231,19 @@ def callBegin(data):
 
 def callBack(data):
     data.screen=data.originalScreen
+
+def startRecording(data):
+    data.recording = True
+    data.wordColor = "red"
+    data.countDown = 5
+    data.counter = 0
   
 def init(canvas,data):
     data.screen = "welcome"
     data.allWordList = generateWordAndPronounceList()
     fontSize = 30
+    data.wordColor = "black"
+    data.recording = False
     data.instructionButton = Button(canvas,text = "Instructions",
                              font = "MSerif %d" %(fontSize),
                              command = lambda: callInstruction(data))
@@ -232,8 +254,10 @@ def init(canvas,data):
                              command = lambda: callBack(data))
     data.randomButton = Button(canvas,text="Randomize Word",
                                font="MSerif %d" %(fontSize),
-                               command=lambda: initiateWordAndPronounce(data))
-    
+                               command=lambda: initiateWordandPronounce(data))
+    data.recordButton = Button(canvas,text="Start Recording!",
+                               font = "MSerif %d" %(fontSize),
+                               command = lambda: startRecording(data))
 
 def mousePressed(event, data):
     pass
@@ -242,7 +266,13 @@ def keyPressed(event, data):
     pass
 
 def timerFired(data):
-    pass
+    if (data.recording):
+        data.counter+=1
+        if (data.counter%10==0):
+            data.countDown-=1
+        if (data.countDown==-1):
+            recordAudio(5,"userVoice.wav")
+            data.recording = not data.recording
 
 def redrawAll(canvas, data):
     if (data.screen == "welcome"):
@@ -287,41 +317,14 @@ def run(width=300, height=300):
     timerFiredWrapper(canvas, data)
     root.mainloop()
     print("Closed!")
-
-
-
+    
 def initiateMain():
     width = 1000
     height = 1000
     run(width,height)
 
 initiateMain()
-    
-    
-    
-#@IGNORE
-#personal test code
-#data = getWavData("output")
-#bitRate = getBitRate("output")
-##print(data)
-#print("\n")
-#
-#f = numpy.fft.rfft(data)
-#print(f)
-#f1 = changeFrequency(f,4000)
-#print(f1)
-#data = numpy.fft.irfft(f1)
-#
-##for i in range(len(data)):
-#    #x = data[i][0]
-#    #y = data[i][1]
-#    #data[i][0] = 5
-#    #data[i][1] = 5
-#data = data.astype(numpy.int32)
-##print(data)
-#writeWavFile(data,"output2",bitRate)
-#playWav("output")
-#playWav("output2")
+
 
 
 
