@@ -46,7 +46,7 @@ def getBitRate(fileName):
     
 #Record input from microphone for given amount of seconds
 #Modified from pyaudio documentation website and stackoverflow website
-def recordAudio(seconds,fileName,bitRate = 22050*2):    
+def recordAudio(seconds,fileName,bitRate = 22050*2):
     chunk = 1024 #number of samples in stream
     numChannels = 2 #stereo
     formatPyaudio = pyaudio.paInt32 #3 bytes
@@ -209,16 +209,15 @@ def drawBegin(canvas,data):
                          anchor=S)
     canvas.create_window(data.width,data.height,window=data.randomButton,
                          anchor=SE)
-    if (not data.recording):
-        canvas.create_window(data.width/2,data.height*heightScale,
+    canvas.create_window(data.width/2,data.height*heightScale,
                              window=data.recordButton,anchor=N)
-    elif(data.countDown>0):
-        canvas.create_text(data.width/2,data.height*heightScale,
-                           text="%d..." %data.countDown,
-                           font="MSerif %d" %(fontSizeInstruct))
-    else:
-        canvas.create_text(data.width/2,data.height*heightScale,
-                           text="Begin!",font="MSerif %d" %(fontSizeInstruct))
+    canvas.create_window(data.width,data.height*heightScale,
+                         window = data.listenWordButton,anchor=NE)
+
+def drawAnalysis(canvas,data):
+    fontSize = 60
+    canvas.create_text(data.width/2,0,text="Analysis",
+                       font ="MSerif %d" %(fontSize),anchor=N)
     
 def callInstruction(data):
     data.originalScreen = data.screen
@@ -231,12 +230,17 @@ def callBegin(data):
 
 def callBack(data):
     data.screen=data.originalScreen
+    
+def callPlayWav():
+    playWav("artificalVoice.wav")
 
-def startRecording(data):
-    data.recording = True
-    data.wordColor = "red"
-    data.countDown = 5
-    data.counter = 0
+def startRecording(canvas,data):
+    data.recordButton.configure(bg="red")
+    canvas.delete(ALL)
+    redrawAll(canvas, data)
+    canvas.update()
+    recordAudio(3,"userVoice.wav")
+    data.screen = "analysis"
   
 def init(canvas,data):
     data.screen = "welcome"
@@ -257,7 +261,10 @@ def init(canvas,data):
                                command=lambda: initiateWordandPronounce(data))
     data.recordButton = Button(canvas,text="Start Recording!",
                                font = "MSerif %d" %(fontSize),
-                               command = lambda: startRecording(data))
+                               command = lambda: startRecording(canvas,data))
+    data.listenWordButton = Button(canvas,text="Listen to word",
+                                   font = "MSerif %d" %(fontSize),
+                                   command = lambda: callPlayWav())
 
 def mousePressed(event, data):
     pass
@@ -271,7 +278,7 @@ def timerFired(data):
         if (data.counter%10==0):
             data.countDown-=1
         if (data.countDown==-1):
-            recordAudio(5,"userVoice.wav")
+            recordAudio(3,"userVoice.wav")
             data.recording = not data.recording
 
 def redrawAll(canvas, data):
@@ -281,6 +288,9 @@ def redrawAll(canvas, data):
         drawInstruction(canvas,data)
     elif(data.screen == "begin"):
         drawBegin(canvas,data)
+    elif(data.screen == "analysis"):
+        drawAnalysis(canvas,data)
+        
 
 def run(width=300, height=300):
     def redrawAllWrapper(canvas, data):
