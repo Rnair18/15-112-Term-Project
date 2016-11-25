@@ -166,24 +166,73 @@ def getWordPronounceTuple(fullString):
     return (wordString,pronounceString)
 
 
-    
+
+def initiateWordandPronounce(data):
+    randomWordandPro = getRandomWordAndPronounce(data.allWordList)
+    (data.currentWord,data.currentPronounce)=getWordPronounceTuple(
+                                             randomWordandPro)
+
 def drawWelcome(canvas,data):
-    fontSize = 25
-    b = Button(canvas,text="test")
+    fontSize = 60
     canvas.create_rectangle(0,0,data.width,data.height,fill="white")
     canvas.create_text(data.width//2,data.height//2,
                        text = "Welcome to *insert Title",
                        font="MSerif %d" %(fontSize),
                        anchor = S)
-    canvas.create_text(0,data.height,text = "Instructions",
-                       font = "MSerif %d" %(fontSize),anchor=SW)
-    canvas.create_text(data.width//2,data.height,text = "Begin!",
-                       font = "MSerif %d" %(fontSize),anchor = S)
-    canvas.create_text(data.width,data.height,text = "Exit")
+    canvas.create_window(0,data.height,window=data.instructionButton,anchor=SW)
+    canvas.create_window(data.width,data.height,window=data.beginButton,
+                         anchor=SE)
+
+#@TODO properly
+def drawInstruction(canvas,data):
+    fontSize = 60
+    instructionText = "@TODO Instructions"
+    canvas.create_text(data.width/2,data.height/2,text=instructionText,
+                       font="MSerif %d" %(fontSize))
+    canvas.create_window(data.width//2,data.height,window=data.backButton,
+                         anchor=S)
+
+def drawBegin(canvas,data):
+    fontSizeInstruct = 40
+    fontSizeMainWord = 60
+    beginText = "Clearly say the word below."
+    canvas.create_text(data.width/2,0,text=beginText,
+                       anchor=N,font="MSerif %d" %(fontSizeInstruct))
+    canvas.create_text(data.width/2,data.height/2,text=data.currentWord,
+                       anchor=S,font="MSerif %d" %(fontSizeMainWord))
+    canvas.create_window(0,data.height,window=data.instructionButton,
+                         anchor=SW)
+    canvas.create_window(data.width/2,data.height,window=data.backButton,
+                         anchor=S)
+    #canvas.create_window(data.width)
     
-def init(root,data):
+def callInstruction(data):
+    data.originalScreen = data.screen
+    data.screen="instruction"
+
+def callBegin(data):
+    data.originalScreen = data.screen
+    data.screen="begin"    
+    initiateWordandPronounce(data)
+
+def callBack(data):
+    data.screen=data.originalScreen
+  
+def init(canvas,data):
     data.screen = "welcome"
     data.allWordList = generateWordAndPronounceList()
+    fontSize = 30
+    data.instructionButton = Button(canvas,text = "Instructions",
+                             font = "MSerif %d" %(fontSize),
+                             command = lambda: callInstruction(data))
+    data.beginButton = Button(canvas,text = "Begin!",
+                              font = "MSerif %d" %(fontSize),
+                              command = lambda: callBegin(data))
+    data.backButton = Button(canvas,text="Back",font = "MSerif %d" %(fontSize),
+                             command = lambda: callBack(data))
+    data.randomButton = Button(canvas,text="Randomize Word",
+                               font="MSerif %d" %(fontSize),
+                               command=lambda: initiateWordAndPronounce(data))
     
 
 def mousePressed(event, data):
@@ -198,8 +247,10 @@ def timerFired(data):
 def redrawAll(canvas, data):
     if (data.screen == "welcome"):
         drawWelcome(canvas,data)
-        
-
+    elif(data.screen == "instruction"):
+        drawInstruction(canvas,data)
+    elif(data.screen == "begin"):
+        drawBegin(canvas,data)
 
 def run(width=300, height=300):
     def redrawAllWrapper(canvas, data):
@@ -226,7 +277,7 @@ def run(width=300, height=300):
     data.timerDelay = 100
     root = Tk()
     canvas = Canvas(root, width=data.width, height=data.height)
-    init(root,data)
+    init(canvas,data)
     canvas.pack()
 
     root.bind("<Button-1>", lambda event:
