@@ -12,6 +12,7 @@ import wave
 import random
 import matplotlib
 from Tkinter import *
+from PIL import ImageTk
 
 #Key Functions from scipy module for wave file reading, writing
 from scipy.io.wavfile import read
@@ -52,7 +53,7 @@ def makeGraph(wavFileName,imgFileName):
 #Record input from microphone for given amount of seconds
 #Modified from pyaudio documentation website and stackoverflow website
 def recordAudio(seconds,fileName,bitRate = 22050*2):
-    return
+    #return
     chunk = 1024 #number of samples in stream
     numChannels = 2 #stereo
     formatPyaudio = pyaudio.paInt32 #3 bytes
@@ -161,8 +162,12 @@ def generateWordAndPronounceList():
     stringList = fullString.split("\n")
     return stringList
 def getRandomWordAndPronounce(wordList):
-    randomNumber = random.randint(0,len(wordList))
-    s = wordList[randomNumber]
+    firstWord = "0"
+    while (not firstWord.isalpha()):
+        randomNumber = random.randint(0,len(wordList))
+        s = wordList[randomNumber]
+        index = s.find(" ")
+        firstWord = s[:index]
     return s
 def getWordPronounceTuple(fullString):
     index = fullString.find(" ")
@@ -181,9 +186,10 @@ def initiateWordandPronounce(data):
     stringToWav(data.currentWord,"artificialVoice.wav")
 
 def initiateAnalysisGraph(data):
-    data.imageAI = ImageTk.PhotoImage(file="artificialVoice.png")
-    data.imageUser = ImageTk.PhotoImage(file="userVoice.png")
-
+    imageAI = ImageTk.PhotoImage(file="artificialVoice.png")
+    imageUser = ImageTk.PhotoImage(file="userVoice.png")
+    data.imageAI = imageAI
+    data.imageUser = imageUser
 def drawWelcome(canvas,data):
     fontSize = 60
     canvas.create_rectangle(0,0,data.width,data.height,fill="white")
@@ -229,6 +235,7 @@ def drawBegin(canvas,data):
                          window = data.pronounceButton,anchor=NW)
 #@TODO split into two
 def drawAnalysis(canvas,data):
+    initiateAnalysisGraph(data)
     fontSize = 60
     xScale = 50
     yScale = 3
@@ -248,7 +255,7 @@ def drawAnalysis(canvas,data):
                          anchor=S)
 
 def drawPronounce(canvas,data):
-    fontSize = 60
+    fontSize = 30
     canvas.create_text(data.width/2,0,text="Learn the Pronounciation",
                        font = "MSerif %d" %(fontSize),anchor=N)
     canvas.create_text(data.width/2,data.height/2,text=data.currentPronounce,
@@ -286,7 +293,6 @@ def startRecording(canvas,data):
     data.screen = "analysis"
     makeGraph("artificialVoice.wav","artificialVoice.png")
     makeGraph("userVoice.wav","userVoice.png")
-    initiateAnalysisGraph(data)
 
 #@TODO reduce the length
 def init(canvas,data):
