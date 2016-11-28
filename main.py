@@ -289,7 +289,7 @@ def startRecording(canvas,data):
     redrawAll(canvas, data)
     canvas.update()
     data.recordButton.configure(bg="grey")
-    recordAudio(3,"userVoice.wav")
+    recordAudio(4,"userVoice.wav")
     data.screen = "analysis"
     makeGraph("artificialVoice.wav","artificialVoice.png")
     makeGraph("userVoice.wav","userVoice.png")
