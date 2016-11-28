@@ -10,6 +10,7 @@ import winsound
 import pyaudio
 import wave
 import random
+import matplotlib
 from Tkinter import *
 
 #Key Functions from scipy module for wave file reading, writing
@@ -43,10 +44,15 @@ def writeWavFile(wavData,fileName,bitrate = 22050):
 def getBitRate(fileName):
     data = scipy.io.wavfile.read(fileName)
     return data[0]
-    
+def makeGraph(wavFileName,imgFileName):
+    data = getWavData(wavFileName)
+    matplotlib.pyplot.clf()
+    matplotlib.pyplot.plot(data)
+    matplotlib.pyplot.savefig(imgFileName)
 #Record input from microphone for given amount of seconds
 #Modified from pyaudio documentation website and stackoverflow website
 def recordAudio(seconds,fileName,bitRate = 22050*2):
+    return
     chunk = 1024 #number of samples in stream
     numChannels = 2 #stereo
     formatPyaudio = pyaudio.paInt32 #3 bytes
@@ -149,6 +155,7 @@ def changeFrequency(wavData,modulationAdder):
         wavData[i][0] = wavData[i][0]+modulationAdder
     return wavData
 
+#@TDO remove different pronounce words AKA number in parentheses
 def generateWordAndPronounceList():
     fullString = readFile("cmudict.dict")
     stringList = fullString.split("\n")
@@ -171,7 +178,11 @@ def initiateWordandPronounce(data):
     randomWordandPro = getRandomWordAndPronounce(data.allWordList)
     (data.currentWord,data.currentPronounce)=getWordPronounceTuple(
                                              randomWordandPro)
-    stringToWav(data.currentWord,"artificalVoice.wav")
+    stringToWav(data.currentWord,"artificialVoice.wav")
+
+def initiateAnalysisGraph(data):
+    data.imageAI = ImageTk.PhotoImage(file="artificialVoice.png")
+    data.imageUser = ImageTk.PhotoImage(file="userVoice.png")
 
 def drawWelcome(canvas,data):
     fontSize = 60
@@ -193,6 +204,7 @@ def drawInstruction(canvas,data):
     canvas.create_window(data.width//2,data.height,window=data.backButton,
                          anchor=S)
 
+#@TODO Split into two
 def drawBegin(canvas,data):
     fontSizeInstruct = 40
     fontSizeMainWord = 70
@@ -213,12 +225,36 @@ def drawBegin(canvas,data):
                              window=data.recordButton,anchor=N)
     canvas.create_window(data.width,data.height*heightScale,
                          window = data.listenWordButton,anchor=NE)
-
+    canvas.create_window(0,data.height*heightScale,
+                         window = data.pronounceButton,anchor=NW)
+#@TODO split into two
 def drawAnalysis(canvas,data):
     fontSize = 60
+    xScale = 50
+    yScale = 3
+    xMargin = data.width/xScale
+    yMargin = data.height/yScale
     canvas.create_text(data.width/2,0,text="Analysis",
                        font ="MSerif %d" %(fontSize),anchor=N)
-    
+    canvas.create_text(0,yMargin,text="AI Voice",
+                       font ="MSerif %d" %(fontSize),anchor=SW)
+    canvas.create_text(data.width,yMargin,text="Your Voice",
+                       font ="MSerif %d" %(fontSize),anchor=SE)
+    canvas.create_image(xMargin,data.height/2,image=data.imageAI,
+                        anchor=W)
+    canvas.create_image(data.width-xMargin,data.height/2,image=data.imageUser,
+                        anchor=E)
+    canvas.create_window(data.width//2,data.height,window=data.backButton,
+                         anchor=S)
+
+def drawPronounce(canvas,data):
+    fontSize = 60
+    canvas.create_text(data.width/2,0,text="Learn the Pronounciation",
+                       font = "MSerif %d" %(fontSize),anchor=N)
+    canvas.create_text(data.width/2,data.height/2,text=data.currentPronounce,
+                       font = "MSerif %d" %(fontSize),anchor=N)
+    canvas.create_window(data.width//2,data.height,window=data.backButton,
+                         anchor=S)
 def callInstruction(data):
     data.originalScreen = data.screen
     data.screen="instruction"
@@ -229,19 +265,30 @@ def callBegin(data):
     initiateWordandPronounce(data)
 
 def callBack(data):
-    data.screen=data.originalScreen
+    (data.screen,data.originalScreen) = (data.originalScreen,data.screen)
+    
+def callPronounce(data):
+    data.originalScreen = data.screen
+    data.screen = "pronounce"    
     
 def callPlayWav():
-    playWav("artificalVoice.wav")
+    playWav("artificialVoice.wav")
 
+#@TODO fix the MVC violation
 def startRecording(canvas,data):
+    data.originalScreen = data.screen
     data.recordButton.configure(bg="red")
     canvas.delete(ALL)
     redrawAll(canvas, data)
     canvas.update()
+    data.recordButton.configure(bg="grey")
     recordAudio(3,"userVoice.wav")
     data.screen = "analysis"
-  
+    makeGraph("artificialVoice.wav","artificialVoice.png")
+    makeGraph("userVoice.wav","userVoice.png")
+    initiateAnalysisGraph(data)
+
+#@TODO reduce the length
 def init(canvas,data):
     data.screen = "welcome"
     data.allWordList = generateWordAndPronounceList()
@@ -265,6 +312,9 @@ def init(canvas,data):
     data.listenWordButton = Button(canvas,text="Listen to word",
                                    font = "MSerif %d" %(fontSize),
                                    command = lambda: callPlayWav())
+    data.pronounceButton = Button(canvas,text="Pronounciation",
+                                  font = "MSerif %d" %(fontSize),
+                                  command = lambda: callPronounce(data))
 
 def mousePressed(event, data):
     pass
@@ -290,6 +340,8 @@ def redrawAll(canvas, data):
         drawBegin(canvas,data)
     elif(data.screen == "analysis"):
         drawAnalysis(canvas,data)
+    elif(data.screen == "pronounce"):
+        drawPronounce(canvas,data)
         
 
 def run(width=300, height=300):
@@ -334,6 +386,8 @@ def initiateMain():
     run(width,height)
 
 initiateMain()
+
+#image = getImage("artificialVoice.png")
 
 
 
