@@ -13,6 +13,8 @@ import random
 import matplotlib
 from Tkinter import *
 from PIL import ImageTk
+import tkMessageBox
+import tkSimpleDialog
 
 #Key Functions from scipy module for wave file reading, writing
 from scipy.io.wavfile import read
@@ -215,6 +217,7 @@ def drawBegin(canvas,data):
     fontSizeInstruct = 40
     fontSizeMainWord = 70
     heightScale = 0.75
+    goHeightShift =100
     beginText = "Clearly say the word below."
     canvas.create_text(data.width/2,0,text=beginText,
                        anchor=N,font="MSerif %d" %(fontSizeInstruct))
@@ -233,6 +236,10 @@ def drawBegin(canvas,data):
                          window = data.listenWordButton,anchor=NE)
     canvas.create_window(0,data.height*heightScale,
                          window = data.pronounceButton,anchor=NW)
+    canvas.create_window(data.width/2,data.height/2,window=data.entryText,
+                         anchor=N)
+    canvas.create_window(data.width/2,data.height/2+goHeightShift,
+                         window = data.entryButtonGo)
 #@TODO split into two
 def drawAnalysis(canvas,data):
     initiateAnalysisGraph(data)
@@ -262,6 +269,9 @@ def drawPronounce(canvas,data):
                        font = "MSerif %d" %(fontSize),anchor=N)
     canvas.create_window(data.width//2,data.height,window=data.backButton,
                          anchor=S)
+    
+def drawEntryTrigger(canvas,data):
+    pass
 def callInstruction(data):
     data.originalScreen = data.screen
     data.screen="instruction"
@@ -276,7 +286,13 @@ def callBack(data):
     
 def callPronounce(data):
     data.originalScreen = data.screen
-    data.screen = "pronounce"    
+    data.screen = "pronounce"
+
+#@TODO Binary sort through to find text
+def getEntryText(data):
+    string = data.entryText.get()
+    print(string)
+    print(data.allWordList[123234])
     
 def callPlayWav():
     playWav("artificialVoice.wav")
@@ -299,8 +315,10 @@ def init(canvas,data):
     data.screen = "welcome"
     data.allWordList = generateWordAndPronounceList()
     fontSize = 30
+    entryWidth = 50
     data.wordColor = "black"
     data.recording = False
+    data.entryTrigger = False
     data.instructionButton = Button(canvas,text = "Instructions",
                              font = "MSerif %d" %(fontSize),
                              command = lambda: callInstruction(data))
@@ -321,6 +339,10 @@ def init(canvas,data):
     data.pronounceButton = Button(canvas,text="Pronounciation",
                                   font = "MSerif %d" %(fontSize),
                                   command = lambda: callPronounce(data))
+    data.entryButtonGo = Button(canvas,text="Enter",
+                              font = "MSerif %d" %(fontSize),
+                              command = lambda: getEntryText(data))
+    data.entryText = Entry(canvas,width=entryWidth)
 
 def mousePressed(event, data):
     pass
@@ -344,6 +366,7 @@ def redrawAll(canvas, data):
         drawInstruction(canvas,data)
     elif(data.screen == "begin"):
         drawBegin(canvas,data)
+        drawEntryTrigger(canvas,data)
     elif(data.screen == "analysis"):
         drawAnalysis(canvas,data)
     elif(data.screen == "pronounce"):
