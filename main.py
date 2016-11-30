@@ -2,6 +2,8 @@
 #rsnair
 #Term Project - Voice Modulation
 
+#-------------------------IMPORTS-------------------------
+
 #Main Modules
 import numpy
 import scipy
@@ -13,8 +15,6 @@ import random
 import matplotlib
 from Tkinter import *
 from PIL import ImageTk
-import tkMessageBox
-import tkSimpleDialog
 
 #Key Functions from scipy module for wave file reading, writing
 from scipy.io.wavfile import read
@@ -23,6 +23,8 @@ from scipy.io.wavfile import write
 #Comtypes module for generating artificial voice
 from comtypes.gen import SpeechLib
 from comtypes.client import CreateObject
+
+#-------------------------Audio/Wav Functions--------------------------
 
 #Comtypes for artifical voice
 #Modified to work with wav files and custom strings from Stackoverflow source
@@ -37,7 +39,8 @@ def stringToWav(s,fileName):
     engine.speak(s)
     stream.Close()
 
-#Modified from powerpoint
+#Followed from powerpoint how to use scipy
+#Modified to fit my code
 #http://www.slideshare.net/mchua/sigproc-selfstudy-17323823
 def getWavData(fileName):
     data = scipy.io.wavfile.read(fileName)
@@ -52,13 +55,14 @@ def makeGraph(wavFileName,imgFileName):
     matplotlib.pyplot.clf()
     matplotlib.pyplot.plot(data)
     matplotlib.pyplot.savefig(imgFileName)
+    
 #Record input from microphone for given amount of seconds
 #Modified from pyaudio documentation website and stackoverflow website
 def recordAudio(seconds,fileName,bitRate = 22050*2):
     #return
     chunk = 1024 #number of samples in stream
     numChannels = 2 #stereo
-    formatPyaudio = pyaudio.paInt32 #3 bytes
+    formatPyaudio = pyaudio.paInt32 #4 bytes
     audioInstance = pyaudio.PyAudio()
     stream = audioInstance.open(format = formatPyaudio, channels = numChannels,
                                 rate = bitRate, input=True,
@@ -66,7 +70,7 @@ def recordAudio(seconds,fileName,bitRate = 22050*2):
     print("Starting Recording for %d seconds!") %(seconds)    
     frames = []    
     for i in range(0, int(bitRate/chunk*seconds)):
-        data = stream.read(chunk) #!?pyaudio encodes data values into string
+        data = stream.read(chunk) #Note! Encodes into string
         frames.append(data)
     print("Finished Recording!")
     
@@ -80,7 +84,7 @@ def recordAudio(seconds,fileName,bitRate = 22050*2):
     waveFile.setsampwidth(audioInstance.get_sample_size(formatPyaudio))
     waveFile.setframerate(bitRate)
     waveFile.writeframes(b''.join(frames))
-    waveFile.close()    
+    waveFile.close()
     
 #Use winsound to play wav file
 #From winsound documentation
@@ -88,12 +92,16 @@ def playWav(fileName):
     winsound.PlaySound(fileName,winsound.SND_FILENAME)
 
 #Take wave file, change volume and rewrite
-def changeVolume(fileName,multiplier=3):
+def changeVolume(fileName,multiplier=2,newFileName = None):
+    if (newFileName==None):
+        newFileName = fileName
     data = getWavData(fileName)
     for i in range(len(data)):
         data[i] = data[i]*multiplier
     bitRate = getBitRate(fileName)
-    writeWavFile(data,fileName,bitRate)
+    writeWavFile(data,newFileName,bitRate)
+
+#-------------------------------Primary Algorithms----------------------------
 
 #Helper function for fourierTranform
 #Loops through lists and multiplies contents of each and then adds them
@@ -105,18 +113,17 @@ def addEachElement(transform,wavData):
         for dataIndex in range(len(wavData)):
             summer+=transform[i][dataIndex]*wavData[dataIndex]
         newList.append(summer)
-    return newList
+    return newList    
     
 #Applies fourier transformation for waveData
-def fourierTransform(wavData):
-    #https://www.youtube.com/watch?v=6-llh6WJo1U#t=551.314916
-    #Video discusses fourier transformation math link from there as well
+#https://www.youtube.com/watch?v=6-llh6WJo1U#t=551.314916
+#Video discusses fourier transformation math link from there as well
+def fourierTransform(wavData):   
     fundamentalFrequency = -2*math.pi
     dimensions = wavData.shape
     rowLength = dimensions[0]
     if (rowLength>30): #To prevent long lengths of wavData as it not optimized
-        return None    #yet.
-        
+        return None    #yet.        
     #wavData = numpy.asarray(wavData, dtype=float) #Convert wave data into
                                                   #numpy array    
     newList = numpy.arange(rowLength) #act as summation from 0 to rowLength-1
@@ -127,8 +134,8 @@ def fourierTransform(wavData):
     resultList = addEachElement(transform,wavData)
     return numpy.asarray(resultList) #change into numpy array
 
-def inverseFourierTransform(wavData):
-    #same formula as above except with positive fundamental frequency...
+#same formula as above except with positive fundamental frequency...
+def inverseFourierTransform(wavData):    
     fundamentalFrequency = 2*math.pi
     dimensions = wavData.shape
     rowLength = dimensions[0]
@@ -145,12 +152,14 @@ def changeWavFileSpeed(fileName,multiplier):
     data = getWavData(fileName)
     bitRate = getBitRate(fileName)
     writeWavFile(data,fileName,bitRate*multiplier)
+
+#---------------------------Secondary Algorithms/Functions-----------------
     
-#From notes to read files
+#From 15-112 notes to read files
 def readFile(path):
     with open(path, "rt") as f:
         return f.read()
-    
+        
 #@TODO
 #Some bug in wavData transformtaion WORKINPROGRESS
 def changeFrequency(wavData,modulationAdder):
@@ -158,10 +167,13 @@ def changeFrequency(wavData,modulationAdder):
         wavData[i][0] = wavData[i][0]+modulationAdder
     return wavData
 
+#Parse through CMU word dictionary
 def generateWordAndPronounceList():
     fullString = readFile("cmudict.dict")
     stringList = fullString.split("\n")
     return stringList
+
+#Get random word from the dictionary
 def getRandomWordAndPronounce(wordList):
     firstWord = "0"
     while (not firstWord.isalpha()):
@@ -170,6 +182,8 @@ def getRandomWordAndPronounce(wordList):
         index = s.find(" ")
         firstWord = s[:index]
     return s
+
+#Split the word and its pronounciation
 def getWordPronounceTuple(fullString):
     index = fullString.find(" ")
     if (index==-1):
@@ -178,6 +192,7 @@ def getWordPronounceTuple(fullString):
     pronounceString = fullString[index+1:]
     return (wordString,pronounceString)
 
+#Change stresses into either primary or secondary
 def modifyPronounceStress(data):
     temp = ""
     for character in data.currentPronounce:
@@ -189,22 +204,21 @@ def modifyPronounceStress(data):
         else:
             temp+=character
     data.currentPronounce = temp
-    
+
+#@TODO
 def writeTextFileArray(fileName,wavFileName):
     numpy.savetxt(fileName,getWavData(wavFileName))
-    
+
+#@TODO
 def removeLeadingTrailingZeros(array,fileName="temp.wav"):
     newArray = []
     for element in array:
         if (element!=0):
-            newArray.append(element)
-    
-            
+            newArray.append(element)           
     newNumpyArray = numpy.asarray(newArray)
-    writeWavFile(newNumpyArray,fileName)
-    
-            
+    writeWavFile(newNumpyArray,fileName)            
 
+#Get a random word an pronounce and AI speak it into a wav file
 def initiateWordandPronounce(data,flag=True):
     if flag:        
         randomWordandPro = getRandomWordAndPronounce(data.allWordList)
@@ -215,11 +229,81 @@ def initiateWordandPronounce(data,flag=True):
     modifyPronounceStress(data)
     stringToWav(data.currentWord,"artificialVoice.wav")
 
+#Initialize the graphs for both AI voice and user voice
 def initiateAnalysisGraph(data):
     imageAI = ImageTk.PhotoImage(file="artificialVoice.png")
     imageUser = ImageTk.PhotoImage(file="userVoice.png")
     data.imageAI = imageAI
     data.imageUser = imageUser
+
+#Get word only without pronounciation
+def getWordOnly(string):
+    firstSpaceIndex = string.find(" ")
+    return string[:firstSpaceIndex]
+
+#Since cmuDict is sorted by alphabet, can find quicker
+def searchForWord(data):
+    data.onlyWordList = list(map(getWordOnly,data.allWordList))
+    index = data.onlyWordList.index(data.entryString)
+    return index
+        
+    #binarySearchForWord(data,onlyWordList)    
+    
+#@TODO Binary sort through to find text
+def getEntryText(data):
+    data.entryString = data.entryText.get()
+    if (len(data.entryString.strip())==0):
+        return
+    else:
+        index = searchForWord(data)
+        if (index==-1):
+            return
+        else:
+            data.typedWord = data.allWordList[index]
+            initiateWordandPronounce(data,False)
+    data.entryText.delete(0,len(data.entryString))
+
+#Button call for Instruction screen
+def callInstruction(data):
+    data.originalScreen = data.screen
+    data.screen="instruction"
+
+#Button call to main screen
+def callBegin(data):
+    data.originalScreen = data.screen
+    data.screen="begin"    
+    initiateWordandPronounce(data)
+
+#Button call for back
+def callBack(data):
+    (data.screen,data.originalScreen) = (data.originalScreen,data.screen)
+
+#Button call for pronounce screen
+def callPronounce(data):
+    data.originalScreen = data.screen
+    data.screen = "pronounce"
+    
+#Button call to play Sound
+def callPlayWav():
+    playWav("artificialVoice.wav")
+
+#@TODO fix the MVC violation
+#Button call to start recording
+def startRecording(canvas,data):
+    data.originalScreen = data.screen
+    data.recordButton.configure(bg="red")
+    canvas.delete(ALL)
+    redrawAll(canvas, data)
+    canvas.update()
+    data.recordButton.configure(bg="grey")
+    recordAudio(3,"userVoice.wav")
+    data.screen = "analysis"
+    makeGraph("artificialVoice.wav","artificialVoice.png")
+    makeGraph("userVoice.wav","userVoice.png")
+
+#-------------------------------GUI Instructions------------------
+
+#Draw splash screen
 def drawWelcome(canvas,data):
     fontSize = 60
     canvas.create_rectangle(0,0,data.width,data.height,fill="white")
@@ -231,7 +315,18 @@ def drawWelcome(canvas,data):
     canvas.create_window(data.width,data.height,window=data.beginButton,
                          anchor=SE)
 
+#Draw pronounce screen
+def drawPronounce(canvas,data):
+    fontSize = 20
+    canvas.create_text(data.width/2,0,text="Learn the Pronounciation",
+                       font = "MSerif %d" %(fontSize),anchor=N)
+    canvas.create_text(data.width/2,data.height/2,text=data.currentPronounce,
+                       font = "MSerif %d" %(fontSize),anchor=N)
+    canvas.create_window(data.width//2,data.height,window=data.backButton,
+                         anchor=S)
+
 #@TODO properly
+#Draw instruction screen
 def drawInstruction(canvas,data):
     fontSize = 60
     instructionText = "@TODO Instructions"
@@ -241,6 +336,7 @@ def drawInstruction(canvas,data):
                          anchor=S)
 
 #@TODO Split into two
+#Draw main screen
 def drawBegin(canvas,data):
     fontSizeInstruct = 40
     fontSizeMainWord = 70
@@ -268,7 +364,9 @@ def drawBegin(canvas,data):
                          anchor=N)
     canvas.create_window(data.width/2,data.height/2+goHeightShift,
                          window = data.entryButtonGo)
+    
 #@TODO split into two
+#Draw analysis screen
 def drawAnalysis(canvas,data):
     initiateAnalysisGraph(data)
     fontSize = 60
@@ -289,75 +387,8 @@ def drawAnalysis(canvas,data):
     canvas.create_window(data.width//2,data.height,window=data.backButton,
                          anchor=S)
 
-def drawPronounce(canvas,data):
-    fontSize = 20
-    canvas.create_text(data.width/2,0,text="Learn the Pronounciation",
-                       font = "MSerif %d" %(fontSize),anchor=N)
-    canvas.create_text(data.width/2,data.height/2,text=data.currentPronounce,
-                       font = "MSerif %d" %(fontSize),anchor=N)
-    canvas.create_window(data.width//2,data.height,window=data.backButton,
-                         anchor=S)
-    
-def drawEntryTrigger(canvas,data):
-    pass
-def callInstruction(data):
-    data.originalScreen = data.screen
-    data.screen="instruction"
-
-def callBegin(data):
-    data.originalScreen = data.screen
-    data.screen="begin"    
-    initiateWordandPronounce(data)
-
-def callBack(data):
-    (data.screen,data.originalScreen) = (data.originalScreen,data.screen)
-    
-def callPronounce(data):
-    data.originalScreen = data.screen
-    data.screen = "pronounce"
-        
-def getWordOnly(string):
-    firstSpaceIndex = string.find(" ")
-    return string[:firstSpaceIndex]
-#Since cmuDict is sorted by alphabet, can find quicker
-def searchForWord(data):
-    data.onlyWordList = list(map(getWordOnly,data.allWordList))
-    index = data.onlyWordList.index(data.entryString)
-    return index
-        
-    #binarySearchForWord(data,onlyWordList)    
-    
-#@TODO Binary sort through to find text
-def getEntryText(data):
-    data.entryString = data.entryText.get()
-    if (len(data.entryString.strip())==0):
-        return
-    else:
-        index = searchForWord(data)
-        if (index==-1):
-            return
-        else:
-            data.typedWord = data.allWordList[index]
-            initiateWordandPronounce(data,False)
-    data.entryText.delete(0,len(data.entryString))
-    
-def callPlayWav():
-    playWav("artificialVoice.wav")
-
-#@TODO fix the MVC violation
-def startRecording(canvas,data):
-    data.originalScreen = data.screen
-    data.recordButton.configure(bg="red")
-    canvas.delete(ALL)
-    redrawAll(canvas, data)
-    canvas.update()
-    data.recordButton.configure(bg="grey")
-    recordAudio(3,"userVoice.wav")
-    data.screen = "analysis"
-    makeGraph("artificialVoice.wav","artificialVoice.png")
-    makeGraph("userVoice.wav","userVoice.png")
-
 #@TODO reduce the length
+#initialize data and button
 def init(canvas,data):
     data.screen = "welcome"
     data.allWordList = generateWordAndPronounceList()
@@ -462,6 +493,10 @@ def initiateMain():
     run(width,height)
 
 initiateMain()
+
+
+#@IGNORE currently testing TODO functions
+
 #data = getWavData("artificialVoice.wav")
 #data = data[:29422/4]
 #writeWavFile(data,"artificialVoice2.wav")
