@@ -189,6 +189,20 @@ def modifyPronounceStress(data):
         else:
             temp+=character
     data.currentPronounce = temp
+    
+def writeTextFileArray(fileName):
+    numpy.savetxt(fileName,getWavData("artificialVoice.wav"))
+    
+def removeLeadingTrailingZeros(array):
+    newArray = []
+    for element in array:
+        if (element!=0):
+            newArray.append(element)
+    
+            
+    newNumpyArray = numpy.asarray(newArray)
+    writeWavFile(newNumpyArray,"temp.wav")
+    
             
 
 def initiateWordandPronounce(data,flag=True):
@@ -447,7 +461,10 @@ def initiateMain():
     height = 1000
     run(width,height)
 
-initiateMain()
+#initiateMain()
+
+removeLeadingTrailingZeros(getWavData("artificialVoice.wav"))
+makeGraph("temp.wav","temp.png")
 
 
 
