@@ -158,7 +158,6 @@ def changeFrequency(wavData,modulationAdder):
         wavData[i][0] = wavData[i][0]+modulationAdder
     return wavData
 
-#@TDO remove different pronounce words AKA number in parentheses
 def generateWordAndPronounceList():
     fullString = readFile("cmudict.dict")
     stringList = fullString.split("\n")
@@ -179,12 +178,27 @@ def getWordPronounceTuple(fullString):
     pronounceString = fullString[index+1:]
     return (wordString,pronounceString)
 
+def modifyPronounceStress(data):
+    temp = ""
+    for character in data.currentPronounce:
+        if character.isdigit():
+            if (character=="1"):
+                temp+="(Primary Stressed)"
+            elif(character=="2"):
+                temp+="(Secondary Stressed)"
+        else:
+            temp+=character
+    data.currentPronounce = temp
+            
 
-
-def initiateWordandPronounce(data):
-    randomWordandPro = getRandomWordAndPronounce(data.allWordList)
+def initiateWordandPronounce(data,flag=True):
+    if flag:        
+        randomWordandPro = getRandomWordAndPronounce(data.allWordList)
+    else:
+        randomWordandPro = data.typedWord
     (data.currentWord,data.currentPronounce)=getWordPronounceTuple(
                                              randomWordandPro)
+    modifyPronounceStress(data)
     stringToWav(data.currentWord,"artificialVoice.wav")
 
 def initiateAnalysisGraph(data):
@@ -262,7 +276,7 @@ def drawAnalysis(canvas,data):
                          anchor=S)
 
 def drawPronounce(canvas,data):
-    fontSize = 30
+    fontSize = 20
     canvas.create_text(data.width/2,0,text="Learn the Pronounciation",
                        font = "MSerif %d" %(fontSize),anchor=N)
     canvas.create_text(data.width/2,data.height/2,text=data.currentPronounce,
@@ -287,12 +301,31 @@ def callBack(data):
 def callPronounce(data):
     data.originalScreen = data.screen
     data.screen = "pronounce"
-
+        
+def getWordOnly(string):
+    firstSpaceIndex = string.find(" ")
+    return string[:firstSpaceIndex]
+#Since cmuDict is sorted by alphabet, can find quicker
+def searchForWord(data):
+    data.onlyWordList = list(map(getWordOnly,data.allWordList))
+    index = data.onlyWordList.index(data.entryString)
+    return index
+        
+    #binarySearchForWord(data,onlyWordList)    
+    
 #@TODO Binary sort through to find text
 def getEntryText(data):
-    string = data.entryText.get()
-    print(string)
-    print(data.allWordList[123234])
+    data.entryString = data.entryText.get()
+    if (len(data.entryString.strip())==0):
+        return
+    else:
+        index = searchForWord(data)
+        if (index==-1):
+            return
+        else:
+            data.typedWord = data.allWordList[index]
+            initiateWordandPronounce(data,False)
+    data.entryText.delete(0,len(data.entryString))
     
 def callPlayWav():
     playWav("artificialVoice.wav")
@@ -305,7 +338,7 @@ def startRecording(canvas,data):
     redrawAll(canvas, data)
     canvas.update()
     data.recordButton.configure(bg="grey")
-    recordAudio(4,"userVoice.wav")
+    recordAudio(3,"userVoice.wav")
     data.screen = "analysis"
     makeGraph("artificialVoice.wav","artificialVoice.png")
     makeGraph("userVoice.wav","userVoice.png")
@@ -415,8 +448,6 @@ def initiateMain():
     run(width,height)
 
 initiateMain()
-
-#image = getImage("artificialVoice.png")
 
 
 
