@@ -193,7 +193,7 @@ def modifyPronounceStress(data):
 def writeTextFileArray(fileName,wavFileName):
     numpy.savetxt(fileName,getWavData(wavFileName))
     
-def removeLeadingTrailingZeros(array):
+def removeLeadingTrailingZeros(array,fileName="temp.wav"):
     newArray = []
     for element in array:
         if (element!=0):
@@ -201,7 +201,7 @@ def removeLeadingTrailingZeros(array):
     
             
     newNumpyArray = numpy.asarray(newArray)
-    writeWavFile(newNumpyArray,"temp.wav")
+    writeWavFile(newNumpyArray,fileName)
     
             
 
@@ -461,11 +461,14 @@ def initiateMain():
     height = 1000
     run(width,height)
 
-#initiateMain()
-
-removeLeadingTrailingZeros(getWavData("artificialVoice.wav"))
-makeGraph("temp.wav","temp.png")
-writeTextFileArray("temp.txt","temp.wav")
+initiateMain()
+#data = getWavData("artificialVoice.wav")
+#data = data[:29422/4]
+#writeWavFile(data,"artificialVoice2.wav")
+#writeTextFileArray("artificialVoice2.txt","artificialVoice2.wav")
+#removeLeadingTrailingZeros(data,"artificialVoice3.wav")
+#makeGraph("artificialVoice3.wav","artificialVoice3.png")
+#data = data[]
 
 
 
