@@ -561,7 +561,7 @@ def testPeaks():
     fileText = readFile("cmudict.dict")
     wordList = fileText.split("\n")
     counter = 0
-    for line in wordList:
+    for line in wordList[::1000]:
         spaceIndex = line.find(" ")
         word = line[:spaceIndex]
         pronounciation = line[spaceIndex+1:]
@@ -569,11 +569,11 @@ def testPeaks():
         data = getWavData("testingAcc.wav")
         vowelCount = numberOfVowels(pronounciation)
         numberOfPeaks = numOfPeaks(data,5000)
-        if (vowelCount - numberOfPeaks)<2:
+        if (vowelCount - numberOfPeaks)<1:
             counter+=1
-    return 100*float(counter)/len(wordList)
+    return 100*float(counter)/(float(len(wordList))/1000)
     
-print(testPeaks())
+#print(testPeaks())
 
 
 
