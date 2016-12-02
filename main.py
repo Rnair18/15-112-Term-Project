@@ -300,7 +300,6 @@ def startRecording(canvas,data):
     data.screen = "analysis"
     makeGraph("artificialVoice.wav","artificialVoice.png")
     makeGraph("userVoice.wav","userVoice.png")
-
 #-------------------------------GUI Instructions------------------
 
 #Draw splash screen
@@ -444,7 +443,6 @@ def redrawAll(canvas, data):
         drawInstruction(canvas,data)
     elif(data.screen == "begin"):
         drawBegin(canvas,data)
-        drawEntryTrigger(canvas,data)
     elif(data.screen == "analysis"):
         drawAnalysis(canvas,data)
     elif(data.screen == "pronounce"):
@@ -491,8 +489,60 @@ def initiateMain():
     width = 1000
     height = 1000
     run(width,height)
+    
+#initiateMain()
 
-initiateMain()
+def isMaxOfSurrounding(wavData,index):
+    
+    partialList = numpy.asarray(wavData[index-500:index+501])
+    #print(partialList.max())
+    return partialList.max()
+    
+    
+
+def numberOfVowels(pronounceString):
+    pronounceString.strip()
+    pronounceList = pronounceString.split(" ")
+    counter = 0
+    for phone in pronounceList:
+        if (phone[0] in "AEIOUaeiou"):
+            counter+=1
+    return counter
+    
+    
+    
+def numOfPeaks(wavData,threshold):
+    total = 0
+    counter = 0
+    numPeaks = 0
+    startIndex = 0
+    digit = 0
+    offset = 1000
+    for element in wavData:
+        total+=element
+        counter+=1
+        average = total/counter
+        if (abs(element-average)>threshold and 
+            element == isMaxOfSurrounding(wavData,counter)):
+            #writeWavFile(wavData[startIndex:counter+offset],"temp%d.wav" %digit,
+            #             22000/1.2)
+            digit+=1
+            startIndex = counter + offset
+            numPeaks+=1
+    return numPeaks
+            
+#data = getWavData("immortal.wav") 
+#print(numOfPeaks(data,5000))
+#data = getWavData("artificialVoice.wav")
+#print(numOfPeaks(data,10000))
+#index  = data.argmax()
+
+#print("index =",index)
+#print("value =",data[index])
+    
+    
+
+
 
 
 #@IGNORE currently testing TODO functions
@@ -505,10 +555,25 @@ initiateMain()
 #makeGraph("artificialVoice3.wav","artificialVoice3.png")
 #data = data[]
 
+####THRESHOLD NUMBER IS 5000
 
-
-
-
+def testPeaks():
+    fileText = readFile("cmudict.dict")
+    wordList = fileText.split("\n")
+    counter = 0
+    for line in wordList:
+        spaceIndex = line.find(" ")
+        word = line[:spaceIndex]
+        pronounciation = line[spaceIndex+1:]
+        stringToWav(word,"testingAcc.wav")
+        data = getWavData("testingAcc.wav")
+        vowelCount = numberOfVowels(pronounciation)
+        numberOfPeaks = numOfPeaks(data,5000)
+        if (vowelCount - numberOfPeaks)<2:
+            counter+=1
+    return 100*float(counter)/len(wordList)
+    
+print(testPeaks())
 
 
 
