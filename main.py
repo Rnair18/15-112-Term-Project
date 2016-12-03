@@ -15,6 +15,7 @@ import random
 import matplotlib
 from Tkinter import *
 from PIL import ImageTk
+import speech_recognition
 
 #Key Functions from scipy module for wave file reading, writing
 from scipy.io.wavfile import read
@@ -50,8 +51,10 @@ def writeWavFile(wavData,fileName,bitrate = 22050):
 def getBitRate(fileName):
     data = scipy.io.wavfile.read(fileName)
     return data[0]
-def makeGraph(wavFileName,imgFileName):
+def makeGraph(wavFileName,imgFileName,fourier=False):
     data = getWavData(wavFileName)
+    if fourier:
+        data = numpy.fft.rfft(data)
     matplotlib.pyplot.clf()
     matplotlib.pyplot.plot(data)
     matplotlib.pyplot.savefig(imgFileName)
@@ -61,7 +64,7 @@ def makeGraph(wavFileName,imgFileName):
 def recordAudio(seconds,fileName,bitRate = 22050*2):
     #return
     chunk = 1024 #number of samples in stream
-    numChannels = 2 #stereo
+    numChannels = 1 #stereo
     formatPyaudio = pyaudio.paInt32 #4 bytes
     audioInstance = pyaudio.PyAudio()
     stream = audioInstance.open(format = formatPyaudio, channels = numChannels,
@@ -235,7 +238,7 @@ def initiateAnalysisGraph(data):
     imageUser = ImageTk.PhotoImage(file="userVoice.png")
     data.imageAI = imageAI
     data.imageUser = imageUser
-
+  
 #Get word only without pronounciation
 def getWordOnly(string):
     firstSpaceIndex = string.find(" ")
@@ -300,6 +303,23 @@ def startRecording(canvas,data):
     data.screen = "analysis"
     makeGraph("artificialVoice.wav","artificialVoice.png")
     makeGraph("userVoice.wav","userVoice.png")
+    #makeGraph("artificialVoice.wav","artificialVoice(fft).png",True)
+    #makeGraph("userVoice.wav","userVoice(fft).png",True)
+    numVowels = numberOfVowels(data.currentPronounce)
+    (numPeaksUser,indexListUser) = numOfPeaks(getWavData("userVoice.wav"),
+                                            500000000,True)-1
+    (numPeaksAI,indexListAI) = numOfPeaks(getWavData("artificialVoice.wav"),
+                                        5000,False)
+    print("numVowel =",numVowels)
+    print("numPeaksUser =",numPeaksUser)
+    print("numPeaksAI =",numPeaksAI)
+    word = recognizeText("userVoice.wav")
+    data.sucess = "either"
+    if (word==None):
+        data.sucess = "fail"
+    elif(word==data.currentWord):
+        data.sucess = "sucess"
+    print(data.sucess)
 #-------------------------------GUI Instructions------------------
 
 #Draw splash screen
@@ -396,6 +416,7 @@ def init(canvas,data):
     data.wordColor = "black"
     data.recording = False
     data.entryTrigger = False
+    data.keepGoing = False
     data.instructionButton = Button(canvas,text = "Instructions",
                              font = "MSerif %d" %(fontSize),
                              command = lambda: callInstruction(data))
@@ -489,16 +510,18 @@ def initiateMain():
     width = 1000
     height = 1000
     run(width,height)
-    
-#initiateMain()
 
-def isMaxOfSurrounding(wavData,index):
-    
-    partialList = numpy.asarray(wavData[index-500:index+501])
+def isMaxOfSurrounding(wavData,index,userFlag):
+    if (userFlag):
+        offset = 2000
+    else:
+        offset = 500
+
+    partialList = numpy.asarray(wavData[index-offset:index+offset+1])
     #print(partialList.max())
+    if (len(partialList)==0):
+        return -999999
     return partialList.max()
-    
-    
 
 def numberOfVowels(pronounceString):
     pronounceString.strip()
@@ -508,28 +531,38 @@ def numberOfVowels(pronounceString):
         if (phone[0] in "AEIOUaeiou"):
             counter+=1
     return counter
+
+#From speech_recognition website documentation (modified)
+def recognizeText(fileName):
+    recognizer = speech_recognition.Recognizer()
+    with speech_recognition.AudioFile("userVoice.wav") as source:
+        audio = recognizer.record(source)
     
+    try:
+        return recognizer.recognize_google(audio).lower()
+    except speech_recognition.UnknownValueError:
+        return None
+    except speech_recognition.RequestError:
+        return None   
     
-    
-def numOfPeaks(wavData,threshold):
+def numOfPeaks(wavData,threshold,userFlag):
     total = 0
     counter = 0
     numPeaks = 0
-    startIndex = 0
     digit = 0
-    offset = 1000
+    indexList = []
     for element in wavData:
         total+=element
         counter+=1
         average = total/counter
         if (abs(element-average)>threshold and 
-            element == isMaxOfSurrounding(wavData,counter)):
+            element == isMaxOfSurrounding(wavData,counter,userFlag)):
             #writeWavFile(wavData[startIndex:counter+offset],"temp%d.wav" %digit,
             #             22000/1.2)
+            indexList.append(counter)
             digit+=1
-            startIndex = counter + offset
             numPeaks+=1
-    return numPeaks
+    return (numPeaks,indexList)
             
 #data = getWavData("immortal.wav") 
 #print(numOfPeaks(data,5000))
@@ -561,7 +594,7 @@ def testPeaks():
     fileText = readFile("cmudict.dict")
     wordList = fileText.split("\n")
     counter = 0
-    for line in wordList[::1000]:
+    for line in wordList[3::100]:
         spaceIndex = line.find(" ")
         word = line[:spaceIndex]
         pronounciation = line[spaceIndex+1:]
@@ -571,8 +604,13 @@ def testPeaks():
         numberOfPeaks = numOfPeaks(data,5000)
         if (vowelCount - numberOfPeaks)<1:
             counter+=1
-    return 100*float(counter)/(float(len(wordList))/1000)
-    
+    return 100*float(counter)/(float(len(wordList))/100)
+
+
+initiateMain()
+
+
+#writeTextFileArray("userVoice.txt","userVoice.wav")
 #print(testPeaks())
 
 
