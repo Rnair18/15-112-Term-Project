@@ -17,6 +17,8 @@ from Tkinter import *
 from PIL import ImageTk
 import speech_recognition
 
+import time
+
 #Key Functions from scipy module for wave file reading, writing
 from scipy.io.wavfile import read
 from scipy.io.wavfile import write
@@ -343,7 +345,6 @@ def startRecording(canvas,data):
     #makeGraph("artificialVoice.wav","artificialVoice(fft).png",True)
     #makeGraph("userVoice.wav","userVoice(fft).png",True)
     numVowels = numberOfVowels(data.currentPronounce)
-    changeWavFileSpeed("artificialVoice.wav",0.25)
     (numPeaksUser,indexListUser) = numOfPeaks(getWavData("userVoice.wav"),
                                             500000000,True)
     #numPeaksUser-=1
@@ -353,6 +354,9 @@ def startRecording(canvas,data):
     data.userVoiceSizeList = lengthOfMaxPeaks("userVoice.wav",indexListUser)
     data.artificialVoiceSizeList = lengthOfMaxPeaks("artificialVoice.wav",
                                                     indexListAI)
+    for i in range(len(data.artificialVoiceSizeList)):
+        data.artificialVoiceSizeList[i]=data.artificialVoiceSizeList[i]*float(
+        1411)/352
     print(data.userVoiceSizeList)
     print(data.artificialVoiceSizeList)
     
@@ -610,7 +614,75 @@ def numOfPeaks(wavData,threshold,userFlag):
             numPeaks+=1
     print("counter",counter)
     return (numPeaks,indexList)
-            
+
+def extraLetters(originalPhone,typeOf):
+    if (originalPhone=="AO"):
+        return "ow"
+    elif (typeOf=="vowel"):
+        if ("A" in originalPhone):
+            if ("E" in originalPhone):
+                return originalPhone[0]+"ye"
+            return originalPhone+"h"
+        elif ("E" in originalPhone):
+            if (originalPhone=="EH"):
+                return originalPhone
+            elif(originalPhone=="ER"):
+                return "H"+originalPhone
+            if (originalPhone=="EY"):
+                return originalPhone.lower()+"e"
+        elif("I" in originalPhone):
+            if (originalPhone=="IH"):
+                return "heeh"
+            elif(originalPhone=="IY"):
+                return "ee"
+        elif("O" in originalPhone):
+            return originalPhone     
+        elif("U" in originalPhone):
+            if (originalPhone=="UH"):
+                return "huh"
+            return "hoo"
+        else:
+            return originalPhone[0]+originalPhone
+    elif (typeOf=="stop" or typeOf=="fricative" or typeOf=="affricate" or
+          typeOf=="liquid" or typeOf=="semivowel" or typeOf=="aspirate"):
+        if ("D" in originalPhone and "H" in originalPhone):
+            return "dhah"
+        elif(originalPhone=="HH"):
+            return originalPhone[0]+"uh"
+        elif(originalPhone=="JH"):
+            return "juh"
+        elif("S" in originalPhone):
+            return originalPhone+"ah"
+        elif(originalPhone=="TH"):
+            return "thaah"
+        elif(originalPhone=="Y" or originalPhone=="Z"):
+            return originalPhone+"ah"
+        elif(originalPhone=="ZH"):
+            return "Zhaah"
+        return originalPhone+"uh"
+    elif(typeOf=="nasal"):
+        if ("G" in originalPhone):
+            return "i"+originalPhone
+        else:
+            return originalPhone+"uh"    
+    else:
+        return originalPhone
+    
+        
+    
+    
+def soundOutPhones():
+    fullText = readFile("cmudict.phones")
+    phoneticList = fullText.split("\n")
+    for line in phoneticList[30:35]:
+        lineList = line.split("\t")
+        newPhone = extraLetters(lineList[0],lineList[1])
+        stringToWav(newPhone,"tempHearing.wav")
+        playWav("tempHearing.wav")
+        time.sleep(0.3)
+        
+
+soundOutPhones()            
 #data = getWavData("immortal.wav") 
 #print(numOfPeaks(data,5000))
 #data = getWavData("artificialVoice.wav")
@@ -654,7 +726,13 @@ def testPeaks():
     return 100*float(counter)/(float(len(wordList))/100)
 
 
-initiateMain()
+#initiateMain()
+
+
+
+#stringToWav("chah","tempHearing.wav")
+#playWav("tempHearing.wav")
+
 
 
 #writeTextFileArray("userVoice.txt","userVoice.wav")
