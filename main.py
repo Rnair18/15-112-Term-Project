@@ -290,8 +290,45 @@ def callPronounce(data):
 def callPlayWav():
     playWav("artificialVoice.wav")
 
+def getSlope(deltaX,y0,y1):
+    return abs(y0-y1)/float(deltaX)
+
+def epsilonEqual(val0,val1,epsilon):
+    if (abs(val0-val1)<epsilon):
+        return True
+    else:
+        return False
+
+def lengthOfMaxPeaks(wavFileName,peakIndexList):
+    data = getWavData(wavFileName)
+    sizeList = []
+    for element in peakIndexList:
+        startValue = element
+        counter=0
+        for value in data[element-10:0:-5]:
+            counter+=1
+            if epsilonEqual(getSlope(5,value,startValue),0,1):
+                print(element,"For Left at",element-counter)
+                leftValue = element-counter
+                break
+            startValue = value
+        startValue = element
+        counter = 0
+        for value in data[element+10:len(data)-1:5]:
+            counter+=1
+            if epsilonEqual(getSlope(5,value,startValue),0,1):
+                print(element,"For Right at",element+counter)
+                rightValue = element+counter
+                break    
+            startValue = value
+        sizeList.append(rightValue-leftValue)
+    print("Main Equality",len(sizeList)==len(peakIndexList))
+    return sizeList
+            
 #@TODO fix the MVC violation
 #Button call to start recording
+#352kbps - AI
+#1411kbps - User
 def startRecording(canvas,data):
     data.originalScreen = data.screen
     data.recordButton.configure(bg="red")
@@ -306,20 +343,29 @@ def startRecording(canvas,data):
     #makeGraph("artificialVoice.wav","artificialVoice(fft).png",True)
     #makeGraph("userVoice.wav","userVoice(fft).png",True)
     numVowels = numberOfVowels(data.currentPronounce)
+    changeWavFileSpeed("artificialVoice.wav",0.25)
     (numPeaksUser,indexListUser) = numOfPeaks(getWavData("userVoice.wav"),
-                                            500000000,True)-1
+                                            500000000,True)
+    #numPeaksUser-=1
+    print("___________________")
     (numPeaksAI,indexListAI) = numOfPeaks(getWavData("artificialVoice.wav"),
                                         5000,False)
+    data.userVoiceSizeList = lengthOfMaxPeaks("userVoice.wav",indexListUser)
+    data.artificialVoiceSizeList = lengthOfMaxPeaks("artificialVoice.wav",
+                                                    indexListAI)
+    print(data.userVoiceSizeList)
+    print(data.artificialVoiceSizeList)
+    
     print("numVowel =",numVowels)
     print("numPeaksUser =",numPeaksUser)
     print("numPeaksAI =",numPeaksAI)
     word = recognizeText("userVoice.wav")
-    data.sucess = "either"
+    data.success = False
     if (word==None):
-        data.sucess = "fail"
+        data.success = False
     elif(word==data.currentWord):
-        data.sucess = "sucess"
-    print(data.sucess)
+        data.success = True
+    print(data.success)
 #-------------------------------GUI Instructions------------------
 
 #Draw splash screen
@@ -523,6 +569,8 @@ def isMaxOfSurrounding(wavData,index,userFlag):
         return -999999
     return partialList.max()
 
+    
+
 def numberOfVowels(pronounceString):
     pronounceString.strip()
     pronounceList = pronounceString.split(" ")
@@ -557,11 +605,10 @@ def numOfPeaks(wavData,threshold,userFlag):
         average = total/counter
         if (abs(element-average)>threshold and 
             element == isMaxOfSurrounding(wavData,counter,userFlag)):
-            #writeWavFile(wavData[startIndex:counter+offset],"temp%d.wav" %digit,
-            #             22000/1.2)
             indexList.append(counter)
             digit+=1
             numPeaks+=1
+    print("counter",counter)
     return (numPeaks,indexList)
             
 #data = getWavData("immortal.wav") 
