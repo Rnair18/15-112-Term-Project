@@ -344,7 +344,7 @@ def startRecording(canvas,data):
     makeGraph("userVoice.wav","userVoice.png")
     #makeGraph("artificialVoice.wav","artificialVoice(fft).png",True)
     #makeGraph("userVoice.wav","userVoice(fft).png",True)
-    data.numVowels = numberOfVowels(data.currentPronounce)
+    data.numVowels = numberOfVowels(data,data.currentPronounce)
     (data.numPeaksUser,data.indexListUser) = numOfPeaks(
                                     getWavData("userVoice.wav"),
                                             500000000,True)
@@ -353,18 +353,20 @@ def startRecording(canvas,data):
     (data.numPeaksAI,data.indexListAI) = numOfPeaks(getWavData(
                                         "artificialVoice.wav"),
                                         5000,False)
-    data.userVoiceSizeList = lengthOfMaxPeaks("userVoice.wav",indexListUser)
+    data.userVoiceSizeList = lengthOfMaxPeaks("userVoice.wav",
+                                              data.indexListUser)
     data.artificialVoiceSizeList = lengthOfMaxPeaks("artificialVoice.wav",
-                                                    indexListAI)
+                                                    data.indexListAI)
     for i in range(len(data.artificialVoiceSizeList)):
         data.artificialVoiceSizeList[i]=data.artificialVoiceSizeList[i]*(float(
         140000)/30000)
     print(data.userVoiceSizeList)
     print(data.artificialVoiceSizeList)
     
-    print("numVowel =",numVowels)
-    print("numPeaksUser =",numPeaksUser)
-    print("numPeaksAI =",numPeaksAI)
+    print("numVowel =",data.numVowels)
+    print("numPeaksUser =",data.numPeaksUser)
+    print("numPeaksAI =",data.numPeaksAI)
+    print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
     determineSucess(data)
     analysisMessage(data)
     
@@ -374,21 +376,92 @@ def determineSucess(data):
     data.success = False
     if(word!=None and word==data.currentWord):
         data.success = True
+    print("Success",data.success)
         
 def subtractSameLenList(list0,list1):
     newList = []
     for i in range(len(list0)):
         newList.append(abs(list0[i]-list1[0]))
+    print("NewList",newList)
     return newList
 
-def numberOfSizeDiscrep(arrayList)
+def numberOfSizeDiscrep(arrayList):
+    threshold = 4000
+    counter = 0
+    index = -1
+    indexList = []
+    for size in arrayList:
+        index+=1
+        if (size>threshold):
+            counter+=1
+            indexList.append(index)
+    print("Counter",counter)
+    return (counter,indexList)
 
 def analysisMessage(data):
-    differencePeaks = abs(data.numPeaksAI-data.numPeaksAI)
+    data.analysisMessage = "Error"
+    differencePeaks = abs(data.numPeaksUser-data.numPeaksAI)
     if (differencePeaks==0 and data.success):
         differenceSizeList = subtractSameLenList(data.userVoiceSizeList,
                                                  data.artificialVoiceSizeList)
-        if ()
+        numDiscrep,indexList = numberOfSizeDiscrep(differenceSizeList)
+        if numDiscrep<2:
+            data.analysisMessage= "Excellent Work!!!!"
+        else:            
+            data.analysisMessage = (
+            "You are elongating or shortening your vowels\nWork on these ")
+            print("Vowel List",data.vowelList)
+            counter = 0
+            temp = ""
+            for index in indexList:
+                temp+="%s " %(data.vowelList[counter])
+                counter+=1
+            temp = removeDigits(temp)
+            data.analysisMessage+=temp
+    elif (data.numPeaksUser>data.numPeaksAI):
+        
+        data.analysisMessage = (
+    "Smooth out your voice.\nRight now you are very jumpy with each syllable")
+    elif(data.numPeaksUser<data.numPeaksAI):
+        if epsilonEqual(data.userVoiceSizeList[0],
+                        data.userVoiceSizeList[0],2000):
+            counter = 0
+            aiIndex = 0
+            for index in range(1,len(data.userVoiceSizeList)):
+                try:
+                    if (epsilonEqual(
+                        data.artificialVoiceSizeList[aiIndex][aiIndex]+1,
+                        data.userVoiceSizeList[index],2000)):
+                        counter+=1
+                        if (counter==2):
+                            data.analysisMessage = "Excellent Work!"
+                            return
+                except:
+                    differenceSizeList = subtractSameLenList(
+                        data.userVoiceSizeList,data.artificialVoiceSizeList)
+                    numDiscrep,indexList = numberOfSizeDiscrep(
+                                                        differenceSizeList)
+                    data.analysisMessage = (
+                "You are elongating or shortening your vowels\nWork on these ")
+                    counter = 0
+                    temp = ""
+                    print("Vowel List",data.vowelList)
+                    for index in indexList:
+                        temp+="%s " %(data.vowelList[counter])
+                        print("Key Counter",counter)
+                        counter+=1
+                    temp = removeDigits(temp)
+                    data.analysisMessage+=temp
+                    return
+                            
+                 
+def removeDigits(s):
+    newString = ""
+    for character in s:
+        if (not character.isdigit()):
+            newString+=character
+    return newString
+            
         
         
         
@@ -476,6 +549,8 @@ def drawAnalysis(canvas,data):
     canvas.create_text(data.width/2,yMargin,
                        text="Analysis of your Prounciation is Complete!",
                        font ="MSerif %d" %(lesserFontSize),anchor=N)
+    canvas.create_text(data.width/2,3*data.height/4,text=data.analysisMessage,
+                       font = "MSerif %d" %(lesserFontSize),anchor=S)
     #canvas.create_image(xMargin,data.height/2,image=data.imageAI,
                         #anchor=W)
     #canvas.create_image(data.width-xMargin,data.height/2,image=data.imageUser,
@@ -611,13 +686,15 @@ def isMaxOfSurrounding(wavData,index,userFlag):
 
     
 
-def numberOfVowels(pronounceString):
+def numberOfVowels(data,pronounceString):
+    data.vowelList = []
     pronounceString.strip()
     pronounceList = pronounceString.split(" ")
     counter = 0
     for phone in pronounceList:
         if (phone[0] in "AEIOUaeiou"):
             counter+=1
+            data.vowelList.append(phone)
     return counter
 
 #From speech_recognition website documentation (modified)
