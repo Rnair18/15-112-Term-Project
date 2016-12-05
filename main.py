@@ -401,7 +401,10 @@ def numberOfSizeDiscrep(arrayList):
 def analysisMessage(data):
     data.analysisMessage = "Error"
     differencePeaks = abs(data.numPeaksUser-data.numPeaksAI)
-    if (differencePeaks==0 and data.success):
+    if (not data.success):
+        data.analysisMessage="Could not recognize the word."
+        data.analysis+="\nTry listening to the pronounciation again."
+    elif (differencePeaks==0):
         differenceSizeList = subtractSameLenList(data.userVoiceSizeList,
                                                  data.artificialVoiceSizeList)
         numDiscrep,indexList = numberOfSizeDiscrep(differenceSizeList)
@@ -473,11 +476,11 @@ def removeDigits(s):
 #Draw splash screen
 def drawWelcome(canvas,data):
     fontSize = 60
-    canvas.create_rectangle(0,0,data.width,data.height,fill="white")
+    canvas.create_rectangle(0,0,data.width,data.height,fill="chocolate2")
     canvas.create_text(data.width//2,data.height//2,
-                       text = "Welcome to *insert Title",
+                       text = "Welcome to\nPhoneticum Pronuntio!",
                        font="MSerif %d" %(fontSize),
-                       anchor = S)
+                       anchor = S,fill="black")
     canvas.create_window(0,data.height,window=data.instructionButton,anchor=SW)
     canvas.create_window(data.width,data.height,window=data.beginButton,
                          anchor=SE)
@@ -576,10 +579,12 @@ def init(canvas,data):
     data.keepGoing = False
     data.instructionButton = Button(canvas,text = "Instructions",
                              font = "MSerif %d" %(fontSize),
-                             command = lambda: callInstruction(data))
+                             command = lambda: callInstruction(data),
+                             bg="indian red",activebackground="firebrick")
     data.beginButton = Button(canvas,text = "Begin!",
                               font = "MSerif %d" %(fontSize),
-                              command = lambda: callBegin(data))
+                              command = lambda: callBegin(data),
+                              bg="indian red",activebackground="firebrick")
     data.backButton = Button(canvas,text="Back",font = "MSerif %d" %(fontSize),
                              command = lambda: callBack(data))
     data.randomButton = Button(canvas,text="Randomize Word",
