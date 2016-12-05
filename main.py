@@ -208,7 +208,7 @@ def modifyPronounceStress(data):
                 temp+="(Secondary Stressed)"
         else:
             temp+=character
-    data.currentPronounce = temp
+    data.currentPronounceStress = temp
 
 #@TODO
 def writeTextFileArray(fileName,wavFileName):
@@ -225,7 +225,7 @@ def removeLeadingTrailingZeros(array,fileName="temp.wav"):
 
 #Get a random word an pronounce and AI speak it into a wav file
 def initiateWordandPronounce(data,flag=True):
-    if flag:        
+    if flag:
         randomWordandPro = getRandomWordAndPronounce(data.allWordList)
     else:
         randomWordandPro = data.typedWord
@@ -344,32 +344,57 @@ def startRecording(canvas,data):
     makeGraph("userVoice.wav","userVoice.png")
     #makeGraph("artificialVoice.wav","artificialVoice(fft).png",True)
     #makeGraph("userVoice.wav","userVoice(fft).png",True)
-    numVowels = numberOfVowels(data.currentPronounce)
-    (numPeaksUser,indexListUser) = numOfPeaks(getWavData("userVoice.wav"),
+    data.numVowels = numberOfVowels(data.currentPronounce)
+    (data.numPeaksUser,data.indexListUser) = numOfPeaks(
+                                    getWavData("userVoice.wav"),
                                             500000000,True)
     #numPeaksUser-=1
-    print("___________________")
-    (numPeaksAI,indexListAI) = numOfPeaks(getWavData("artificialVoice.wav"),
+    print("____________________________")
+    (data.numPeaksAI,data.indexListAI) = numOfPeaks(getWavData(
+                                        "artificialVoice.wav"),
                                         5000,False)
     data.userVoiceSizeList = lengthOfMaxPeaks("userVoice.wav",indexListUser)
     data.artificialVoiceSizeList = lengthOfMaxPeaks("artificialVoice.wav",
                                                     indexListAI)
     for i in range(len(data.artificialVoiceSizeList)):
-        data.artificialVoiceSizeList[i]=data.artificialVoiceSizeList[i]*float(
-        1411)/352
+        data.artificialVoiceSizeList[i]=data.artificialVoiceSizeList[i]*(float(
+        140000)/30000)
     print(data.userVoiceSizeList)
     print(data.artificialVoiceSizeList)
     
     print("numVowel =",numVowels)
     print("numPeaksUser =",numPeaksUser)
     print("numPeaksAI =",numPeaksAI)
-    word = recognizeText("userVoice.wav")
+    determineSucess(data)
+    analysisMessage(data)
+    
+    
+def determineSucess(data):
+    word = recognizeText("userVoice.wav")   
     data.success = False
-    if (word==None):
-        data.success = False
-    elif(word==data.currentWord):
+    if(word!=None and word==data.currentWord):
         data.success = True
-    print(data.success)
+        
+def subtractSameLenList(list0,list1):
+    newList = []
+    for i in range(len(list0)):
+        newList.append(abs(list0[i]-list1[0]))
+    return newList
+
+def numberOfSizeDiscrep(arrayList)
+
+def analysisMessage(data):
+    differencePeaks = abs(data.numPeaksAI-data.numPeaksAI)
+    if (differencePeaks==0 and data.success):
+        differenceSizeList = subtractSameLenList(data.userVoiceSizeList,
+                                                 data.artificialVoiceSizeList)
+        if ()
+        
+        
+        
+    
+    
+    
 #-------------------------------GUI Instructions------------------
 
 #Draw splash screen
@@ -389,9 +414,13 @@ def drawPronounce(canvas,data):
     fontSize = 20
     canvas.create_text(data.width/2,0,text="Learn the Pronounciation",
                        font = "MSerif %d" %(fontSize),anchor=N)
-    canvas.create_text(data.width/2,data.height/2,text=data.currentPronounce,
+    canvas.create_text(data.width/2,data.height/2,
+                       text=data.currentPronounceStress,
                        font = "MSerif %d" %(fontSize),anchor=N)
     canvas.create_window(data.width//2,data.height,window=data.backButton,
+                         anchor=S)
+    canvas.create_window(data.width/2,data.height/2,
+                         window=data.pronounceHearButton,
                          anchor=S)
 
 #@TODO properly
@@ -439,22 +468,25 @@ def drawBegin(canvas,data):
 def drawAnalysis(canvas,data):
     initiateAnalysisGraph(data)
     fontSize = 60
-    xScale = 50
+    lesserFontSize = 30
     yScale = 3
-    xMargin = data.width/xScale
     yMargin = data.height/yScale
     canvas.create_text(data.width/2,0,text="Analysis",
                        font ="MSerif %d" %(fontSize),anchor=N)
-    canvas.create_text(0,yMargin,text="AI Voice",
-                       font ="MSerif %d" %(fontSize),anchor=SW)
-    canvas.create_text(data.width,yMargin,text="Your Voice",
-                       font ="MSerif %d" %(fontSize),anchor=SE)
-    canvas.create_image(xMargin,data.height/2,image=data.imageAI,
-                        anchor=W)
-    canvas.create_image(data.width-xMargin,data.height/2,image=data.imageUser,
-                        anchor=E)
+    canvas.create_text(data.width/2,yMargin,
+                       text="Analysis of your Prounciation is Complete!",
+                       font ="MSerif %d" %(lesserFontSize),anchor=N)
+    #canvas.create_image(xMargin,data.height/2,image=data.imageAI,
+                        #anchor=W)
+    #canvas.create_image(data.width-xMargin,data.height/2,image=data.imageUser,
+                        #anchor=E)
     canvas.create_window(data.width//2,data.height,window=data.backButton,
                          anchor=S)
+
+    
+def startPronounce(data):
+    playPronounciation(data)
+    
 
 #@TODO reduce the length
 #initialize data and button
@@ -490,6 +522,10 @@ def init(canvas,data):
     data.entryButtonGo = Button(canvas,text="Enter",
                               font = "MSerif %d" %(fontSize),
                               command = lambda: getEntryText(data))
+    data.pronounceHearButton = Button(canvas,
+                                      text="Listen to Phonetic Pronounciation",
+                                      font = "MSerif %d" %(fontSize),
+                                      command = lambda: startPronounce(data))
     data.entryText = Entry(canvas,width=entryWidth)
 
 def mousePressed(event, data):
@@ -667,45 +703,36 @@ def extraLetters(originalPhone,typeOf):
             return originalPhone+"uh"    
     else:
         return originalPhone
+
+def playPronounciation(data):
+    phoneticText = readFile("cmudict.phones")
+    phoneticList = phoneticText.split("\n")
+    onlyPhones = []
+    temp = ""
+    indexList = []
+    for letter in data.currentPronounce:
+        if (not letter.isdigit()):
+            temp+=letter            
+    listOfCurrentPronounce = temp.split(" ")                
+    for line in phoneticList:
+        lineList = line.split("\t")
+        onlyPhones.append(lineList[0])        
+    for phonetic in listOfCurrentPronounce:
+        index = onlyPhones.index(phonetic)
+        indexList.append(index)
+    soundOutPhones(indexList)
+    playWav("artificialVoice.wav")
+
     
-        
-    
-    
-def soundOutPhones():
+def soundOutPhones(indexList):
     fullText = readFile("cmudict.phones")
     phoneticList = fullText.split("\n")
-    for line in phoneticList[30:35]:
+    for index in indexList:
+        line = phoneticList[index]
         lineList = line.split("\t")
         newPhone = extraLetters(lineList[0],lineList[1])
-        stringToWav(newPhone,"tempHearing.wav")
-        playWav("tempHearing.wav")
-        time.sleep(0.3)
-        
-
-soundOutPhones()            
-#data = getWavData("immortal.wav") 
-#print(numOfPeaks(data,5000))
-#data = getWavData("artificialVoice.wav")
-#print(numOfPeaks(data,10000))
-#index  = data.argmax()
-
-#print("index =",index)
-#print("value =",data[index])
-    
-    
-
-
-
-
-#@IGNORE currently testing TODO functions
-
-#data = getWavData("artificialVoice.wav")
-#data = data[:29422/4]
-#writeWavFile(data,"artificialVoice2.wav")
-#writeTextFileArray("artificialVoice2.txt","artificialVoice2.wav")
-#removeLeadingTrailingZeros(data,"artificialVoice3.wav")
-#makeGraph("artificialVoice3.wav","artificialVoice3.png")
-#data = data[]
+        stringToWav(newPhone,"phoneticSound.wav")
+        playWav("phoneticSound.wav")
 
 ####THRESHOLD NUMBER IS 5000
 
@@ -726,18 +753,7 @@ def testPeaks():
     return 100*float(counter)/(float(len(wordList))/100)
 
 
-#initiateMain()
-
-
-
-#stringToWav("chah","tempHearing.wav")
-#playWav("tempHearing.wav")
-
-
-
-#writeTextFileArray("userVoice.txt","userVoice.wav")
-#print(testPeaks())
-
+initiateMain()
 
 
     
