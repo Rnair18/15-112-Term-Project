@@ -17,8 +17,6 @@ from Tkinter import *
 from PIL import ImageTk
 import speech_recognition
 
-import time
-
 #Key Functions from scipy module for wave file reading, writing
 from scipy.io.wavfile import read
 from scipy.io.wavfile import write
@@ -153,12 +151,12 @@ def inverseFourierTransform(wavData):
     return numpy.asarray(resultList)
 
 #Slow down or speed up wave file depending on multiplier >1 or <1
-def changeWavFileSpeed(fileName,multiplier):
-    data = getWavData(fileName)
-    bitRate = getBitRate(fileName)
+def changeWavFileSpeed(originalFileName,newFileName,multiplier):
+    data = getWavData(originalFileName)
+    bitRate = getBitRate(originalFileName)
     newValue = int(bitRate*multiplier)
     print(newValue)
-    writeWavFile(data,fileName,newValue)
+    writeWavFile(data,newFileName,newValue)
 
 #---------------------------Secondary Algorithms/Functions-----------------
     
@@ -200,6 +198,7 @@ def getWordPronounceTuple(fullString):
     return (wordString,pronounceString)
 
 #Change stresses into either primary or secondary
+##############################Change to bold words ###########################
 def modifyPronounceStress(data):
     temp = ""
     for character in data.currentPronounce:
@@ -284,11 +283,14 @@ def callInstruction(data):
 #Button call to main screen
 def callBegin(data):
     data.originalScreen = data.screen
-    data.screen="begin"    
+    data.screen="begin"
+    data.instructionButton.configure(bg="steel blue")
     initiateWordandPronounce(data)
 
 #Button call for back
 def callBack(data):
+    if data.originalScreen == "welcome":
+        data.instructionButton.configure(bg="indian red")
     (data.screen,data.originalScreen) = (data.originalScreen,data.screen)
 
 #Button call for pronounce screen
@@ -542,7 +544,6 @@ def drawBegin(canvas,data):
     titleScale = 0.25
     goHeightShift =100
     beginText = "Clearly say the word below."
-    drawHelper(canvas,data)
     canvas.create_rectangle(0,0,data.width,data.height,fill="cadet blue")
     canvas.create_text(data.width/2,data.height*titleScale,text=beginText,
                        anchor=N,font="MSerif %d" %(fontSizeInstruct))
@@ -566,6 +567,8 @@ def drawBegin(canvas,data):
     canvas.create_window(data.width/2,data.height/2+goHeightShift,
                          window = data.entryButtonGo)
     
+    drawHelper(canvas,data)
+    
 #@TODO split into two
 #Draw analysis screen
 def drawAnalysis(canvas,data):
@@ -581,10 +584,10 @@ def drawAnalysis(canvas,data):
                        font ="MSerif %d" %(lesserFontSize),anchor=N)
     canvas.create_text(data.width/2,3*data.height/4,text=data.analysisMessage,
                        font = "MSerif %d" %(lesserFontSize),anchor=S)
-    #canvas.create_image(xMargin,data.height/2,image=data.imageAI,
-                        #anchor=W)
-    #canvas.create_image(data.width-xMargin,data.height/2,image=data.imageUser,
-                        #anchor=E)
+    canvas.create_image(xMargin,data.height/2,image=data.imageAI,
+                        anchor=W)
+    canvas.create_image(data.width,data.height/2,image=data.imageUser,
+                        anchor=E)
     canvas.create_window(data.width//2,data.height,window=data.backButton,
                          anchor=S)
 
@@ -616,6 +619,7 @@ def init(canvas,data):
     recordMessage = "Press this button to start recording your voice."
     randomMessage = "Press this button to randomize the word on the screen."
     backMessage = "Press this button to go back to the previous page."
+    pronounceMessage = "Press this button to go to the pronounciation page."
     data.helpMessageOriginal = "Hover over each widget and look here for help!"
     data.scalePronounceBeforeValue = 1.0
     data.helpMessage = data.helpMessageOriginal
@@ -648,7 +652,8 @@ def init(canvas,data):
                                                         ))
     data.recordButton = Button(canvas,text="Start Recording!",
                                font = "MSerif %d" %(fontSize),
-                               command = lambda: startRecording(canvas,data))
+                               command = lambda: startRecording(canvas,data),
+                               bg = "steel blue")
     data.recordButton.bind("<Enter>",lambda event: changeHelp(data,True,
                                                         recordMessage))
     data.recordButton.bind("<Leave>",lambda event: changeHelp(data,False,
@@ -658,7 +663,11 @@ def init(canvas,data):
                                    command = lambda: callPlayWav())
     data.pronounceButton = Button(canvas,text="Pronounciation",
                                   font = "MSerif %d" %(fontSize),
-                                  command = lambda: callPronounce(data))
+                                  command = lambda: callPronounce(data),
+                                  bg = "steel blue")
+    data.pronounceButton.bind("<Enter>",lambda event: changeHelp(data,True,
+                                                        pronounceMessage))
+    data.pronounceButton.bind("<Leave>",lambda event: changeHelp(data,False,))
     data.entryButtonGo = Button(canvas,text="Enter",
                               font = "MSerif %d" %(fontSize),
                               command = lambda: getEntryText(data))
@@ -682,6 +691,7 @@ def keyPressed(event, data):
 
 def timerFired(data):
     newValue = float(data.pronounceScale.get())
+    #print(getBitRate("fullPhoneticSound.wav"))
     if (data.recording):
         data.counter+=1
         if (data.counter%10==0):
@@ -694,8 +704,8 @@ def timerFired(data):
         print("NewValue",newValue)
         print("origingal",data.scalePronounceBeforeValue)
         data.scalePronounceBeforeValue = newValue
-        changeWavFileSpeed("fullPhoneticSound.wav",
-                           newValue)
+       # changeWavFileSpeed("fullPhoneticSound.wav",
+        #                   newValue)
 
 def redrawAll(canvas, data):
     if (data.screen == "welcome"):
@@ -875,17 +885,18 @@ def playPronounciation(data):
     for phonetic in listOfCurrentPronounce:
         index = onlyPhones.index(phonetic)
         indexList.append(index)
-    soundOutPhones(indexList)
+    soundOutPhones(data,indexList)
     playWav("artificialVoice.wav")
     
     
-def createFullPhoneSound(arrayList):
+def createFullPhoneSound(data,arrayList):
     tupleOfPhones = tuple(arrayList)
     newData = numpy.concatenate(tupleOfPhones)
-    writeWavFile(newData,"fullPhoneticSound.wav")
+    writeWavFile(newData,"fullPhoneticSound.wav",
+                 data.scalePronounceBeforeValue*getBitRate("phoneticSound0.wav"))
 
     
-def soundOutPhones(indexList):
+def soundOutPhones(data,indexList):
     fullText = readFile("cmudict.phones")
     phoneticList = fullText.split("\n")
     phoneticSoundIndex = 0
@@ -896,13 +907,13 @@ def soundOutPhones(indexList):
         newPhone = extraLetters(lineList[0],lineList[1])
         phoneFileName = "phoneticSound%d.wav" %(phoneticSoundIndex)
         stringToWav(newPhone,phoneFileName)
-        data = getWavData(phoneFileName)
-        data = removeTrailingZeros(data)
-        data = removeLeadingZeros(data)
-        phoneticSoundList.append(data)
-        writeWavFile(data,phoneFileName)
+        wavData = getWavData(phoneFileName)
+        wavData = removeTrailingZeros(wavData)
+        wavData = removeLeadingZeros(wavData)
+        phoneticSoundList.append(wavData)
+        writeWavFile(wavData,phoneFileName)
         phoneticSoundIndex+=1
-    createFullPhoneSound(phoneticSoundList)
+    createFullPhoneSound(data,phoneticSoundList)
     playWav("fullPhoneticSound.wav")
         
 
