@@ -156,7 +156,9 @@ def inverseFourierTransform(wavData):
 def changeWavFileSpeed(fileName,multiplier):
     data = getWavData(fileName)
     bitRate = getBitRate(fileName)
-    writeWavFile(data,fileName,bitRate*multiplier)
+    newValue = int(bitRate*multiplier)
+    print(newValue)
+    writeWavFile(data,fileName,newValue)
 
 #---------------------------Secondary Algorithms/Functions-----------------
     
@@ -488,6 +490,7 @@ def drawWelcome(canvas,data):
 #Draw pronounce screen
 def drawPronounce(canvas,data):
     fontSize = 20
+    heightScale = 0.75
     canvas.create_text(data.width/2,0,text="Learn the Pronounciation",
                        font = "MSerif %d" %(fontSize),anchor=N)
     canvas.create_text(data.width/2,data.height/2,
@@ -498,6 +501,8 @@ def drawPronounce(canvas,data):
     canvas.create_window(data.width/2,data.height/2,
                          window=data.pronounceHearButton,
                          anchor=S)
+    canvas.create_window(data.width/2,data.height*heightScale,anchor=N,
+                         window=data.pronounceScale)
 
 #@TODO properly
 #Draw instruction screen
@@ -612,6 +617,7 @@ def init(canvas,data):
     randomMessage = "Press this button to randomize the word on the screen."
     backMessage = "Press this button to go back to the previous page."
     data.helpMessageOriginal = "Hover over each widget and look here for help!"
+    data.scalePronounceBeforeValue = 1.0
     data.helpMessage = data.helpMessageOriginal
     data.instructionButton = Button(canvas,text = "Instructions",
                              font = "MSerif %d" %(fontSize),
@@ -663,6 +669,9 @@ def init(canvas,data):
                                       text="Listen to Phonetic Pronounciation",
                                       font = "MSerif %d" %(fontSize),
                                       command = lambda: startPronounce(data))
+    data.pronounceScale = Scale(canvas,from_=0.5,to=2.0,
+                         resolution=-1,orient=HORIZONTAL)
+    data.pronounceScale.set(1.0)
     data.entryText = Entry(canvas,width=entryWidth)
 
 def mousePressed(event, data):
@@ -672,6 +681,7 @@ def keyPressed(event, data):
     pass
 
 def timerFired(data):
+    newValue = float(data.pronounceScale.get())
     if (data.recording):
         data.counter+=1
         if (data.counter%10==0):
@@ -679,6 +689,13 @@ def timerFired(data):
         if (data.countDown==-1):
             recordAudio(3,"userVoice.wav")
             data.recording = not data.recording
+    if (data.screen=="pronounce" and
+        not epsilonEqual(data.scalePronounceBeforeValue,newValue,0.1)):
+        print("NewValue",newValue)
+        print("origingal",data.scalePronounceBeforeValue)
+        data.scalePronounceBeforeValue = newValue
+        changeWavFileSpeed("fullPhoneticSound.wav",
+                           newValue)
 
 def redrawAll(canvas, data):
     if (data.screen == "welcome"):
