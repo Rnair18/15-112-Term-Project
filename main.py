@@ -61,6 +61,8 @@ def makeGraph(wavFileName,imgFileName,fourier=False):
     
 #Record input from microphone for given amount of seconds
 #Modified from pyaudio documentation website and stackoverflow website
+#https://people.csail.mit.edu/hubert/pyaudio/docs/
+#http://stackoverflow.com/questions/892199/detect-record-audio-in-python
 def recordAudio(seconds,fileName,bitRate = 22050*2):
     #return
     chunk = 1024 #number of samples in stream
@@ -91,6 +93,7 @@ def recordAudio(seconds,fileName,bitRate = 22050*2):
     
 #Use winsound to play wav file
 #From winsound documentation
+#https://docs.python.org/2/library/winsound.html
 def playWav(fileName):
     winsound.PlaySound(fileName,winsound.SND_FILENAME)
 
@@ -161,6 +164,7 @@ def changeWavFileSpeed(originalFileName,newFileName,multiplier):
 #---------------------------Secondary Algorithms/Functions-----------------
     
 #From 15-112 notes to read files
+#http://www.cs.cmu.edu/~112/notes/notes-strings.html#basicFileIO
 def readFile(path):
     with open(path, "rt") as f:
         return f.read()
@@ -213,11 +217,8 @@ def modifyPronounceStress(data):
             temp+=character
     data.currentPronounceStress = temp
 
-#@TODO
-def writeTextFileArray(fileName,wavFileName):
-    numpy.savetxt(fileName,getWavData(wavFileName))
 
-#@TODO
+
 def removeLeadingZeros(array):
     for i in range(len(array)):
         if not epsilonEqual(array[i],0.0,1):
@@ -273,7 +274,7 @@ def searchForWord(data):
         
     #binarySearchForWord(data,onlyWordList)    
     
-#@TODO Binary sort through to find text
+
 def getEntryText(data):
     data.entryString = data.entryText.get()
     if (len(data.entryString.strip())==0):
@@ -345,7 +346,6 @@ def lengthOfMaxPeaks(wavFileName,peakIndexList):
     print("Main Equality",len(sizeList)==len(peakIndexList))
     return sizeList
             
-#@TODO fix the MVC violation
 #Button call to start recording
 #352kbps - AI
 #1411kbps - User
@@ -355,7 +355,7 @@ def startRecording(canvas,data):
     canvas.delete(ALL)
     redrawAll(canvas, data)
     canvas.update()
-    data.recordButton.configure(bg="grey")
+    data.recordButton.configure(bg="steel blue")
     recordAudio(3,"userVoice.wav")
     data.screen = "analysis"
     makeGraph("artificialVoice.wav","artificialVoice.png")
@@ -417,12 +417,12 @@ def numberOfSizeDiscrep(arrayList):
     return (counter,indexList)
 
 def analysisMessage(data):
-    data.analysisMessage = "Error"
+    data.analysisMessage="Could not recognize the word."
+    data.analysisMessage+="\nTry listening to the pronounciation again.\n"
+    data.analysisMessage+="Or try to speak louder with less outside noise."
     differencePeaks = abs(data.numPeaksUser-data.numPeaksAI)
     if (not data.success):
-        data.analysisMessage="Could not recognize the word."
-        data.analysisMessage+="\nTry listening to the pronounciation again.\n"
-        data.analysisMessage+="Or try to speak louder with less outside noise"
+        return        
     elif (differencePeaks==0):
         differenceSizeList = subtractSameLenList(data.userVoiceSizeList,
                                                  data.artificialVoiceSizeList)
@@ -433,11 +433,23 @@ def analysisMessage(data):
         else:            
             data.analysisMessage = (
             "You are elongating or shortening certain vowels\nWork on these ")
+            print("Errorry indexList",indexList)
             print("Vowel List",data.vowelList)
             counter = 0
             temp = ""
+            if len(indexList)==0:
+                data.analysisMessage = "Put a little more stress on "
+                data.analysisMessage+= "each vowel.\nYour syllables "
+                data.analysisMessage+= "aregetting blurred together."
+                return
             for index in indexList:
-                temp+="%s " %(data.vowelList[index])
+                if (index>=len(data.vowelList)):
+                   data.analysisMessage = "You adding unecessary stresses on "
+                   data.analysisMessage+= "the last syllables."
+                   return
+                   
+                val = data.vowelList[index]
+                temp+="%s " %(val)
                 counter+=1
             temp = removeDigits(temp)
             data.analysisMessage+=temp
@@ -469,15 +481,25 @@ def analysisMessage(data):
                     counter = 0
                     temp = ""
                     print("Vowel List",data.vowelList)
+                    print("Errorry indexList",indexList)
+                    if len(indexList)==0:
+                        data.analysisMessage = "Put a little more stress on "
+                        data.analysisMessage+= "each vowel.\nYour syllables "
+                        data.analysisMessage+= "are getting blurred together."
+                        return
                     for index in indexList:
-                        temp+="%s " %(data.vowelList[counter])
+                        if (index>=len(data.vowelList)):
+                            data.analysisMessage = "You adding unecessary"
+                            data.analysisMessage+= " stresses on "
+                            data.analysisMessage+= "the last syllables."
+                            return
+                        temp+="%s " %(data.vowelList[index])
                         print("Key Counter",counter)
                         counter+=1
                     temp = removeDigits(temp)
                     data.analysisMessage+=temp
                     return
-                            
-                 
+                    
 def removeDigits(s):
     newString = ""
     for character in s:
@@ -611,25 +633,27 @@ def drawBegin(canvas,data):
 #Draw analysis screen
 def drawAnalysis(canvas,data):
     initiateAnalysisGraph(data)
-    fontSize = 60
+    fontSize = 40
     lesserFontSize = 30
-    yScale = 3
-    yMargin = data.height/yScale
+    yMargin = data.height/float(20)
     xMargin = data.width/float(10)
-    canvas.create_rectangle()
-    canvas.create_text(data.width/2,0,text="Analysis",
-                       font ="MSerif %d" %(fontSize),anchor=N)
-    canvas.create_text(data.width/2,yMargin,
+    canvas.create_rectangle(0,0,data.width,data.height,fill="LavenderBlush3")
+    canvas.create_text(data.width/2,0,
                        text="Analysis of your Prounciation is Complete!",
-                       font ="MSerif %d" %(lesserFontSize),anchor=N)
-    canvas.create_text(data.width/2,3*data.height/4,text=data.analysisMessage,
+                       font ="MSerif %d" %(fontSize),anchor=N)
+    canvas.create_text(data.width/2,3*data.height/4+yMargin,
+                       text=data.analysisMessage,
                        font = "MSerif %d" %(lesserFontSize),anchor=S)
     canvas.create_image(xMargin,data.height/2,image=data.imageAI,
                         anchor=W)
-    canvas.create_image(data.width,data.height/2,image=data.imageUser,
+    canvas.create_image(data.width-xMargin,data.height/2,image=data.imageUser,
                         anchor=E)
     canvas.create_window(data.width//2,data.height,window=data.backButton,
                          anchor=S)
+    canvas.create_window(xMargin,data.height/2-3*yMargin,
+                         window=data.analysisAIButton,anchor=SW)
+    canvas.create_window(data.width-xMargin,data.height/2-3*yMargin,
+                         window=data.analysisUserButton,anchor=SE)
 
     
 def startPronounce(data):
@@ -741,6 +765,16 @@ def init(canvas,data):
     data.entryText.bind("<Enter>",lambda event: changeHelp(data,True,
                                                            entryMessage))
     data.entryText.bind("<Leave>",lambda event: changeHelp(data,False))
+    data.analysisAIButton = Button(canvas,text="Artificial Voice",
+                                   command = lambda: 
+                                       playWav("artificialVoice.wav"),
+                                   bg = "PeachPuff3",
+                                   font = "MSerif %d" %(fontSize))
+    data.analysisUserButton = Button(canvas,text="Your Voice",
+                                     command = lambda:
+                                         playWav("userVoice.wav"),
+                                     font = "MSerif %d" %(fontSize),
+                                     bg="PeachPuff3")
 
 def mousePressed(event, data):
     pass
@@ -845,6 +879,8 @@ def numberOfVowels(data,pronounceString):
     return counter
 
 #From speech_recognition website documentation (modified)
+#https://github.com/Uberi/speech_recognition/blob/master/examples/
+#audio_transcribe.py
 def recognizeText(fileName):
     recognizer = speech_recognition.Recognizer()
     with speech_recognition.AudioFile("userVoice.wav") as source:
