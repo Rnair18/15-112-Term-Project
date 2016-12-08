@@ -53,9 +53,19 @@ def getBitRate(fileName):
     return data[0]
 def makeGraph(wavFileName,imgFileName,fourier=False):
     data = getWavData(wavFileName)
-    if fourier:
-        data = numpy.fft.rfft(data)
     matplotlib.pyplot.clf()
+    maxX = 50000
+    maxY = 2.5*(10**12)
+    minX = 0
+    minY = -maxY
+    if fourier:
+        data = numpy.fft.rfft(data)   
+        axes = matplotlib.pyplot.gca()
+        if "artificial" in wavFileName:
+            maxY = 2*(10**6)
+            minY = -maxY
+        axes.set_xlim([minX,maxX])
+        axes.set_ylim([minY,maxY])
     matplotlib.pyplot.plot(data)
     matplotlib.pyplot.savefig(imgFileName)
     
@@ -153,173 +163,6 @@ def inverseFourierTransform(wavData):
     resultList = addEachElement(transform,wavData)
     return numpy.asarray(resultList)
 
-#Slow down or speed up wave file depending on multiplier >1 or <1
-def changeWavFileSpeed(originalFileName,newFileName,multiplier):
-    data = getWavData(originalFileName)
-    bitRate = getBitRate(originalFileName)
-    newValue = int(bitRate*multiplier)
-    print(newValue)
-    writeWavFile(data,newFileName,newValue)
-
-#---------------------------Secondary Algorithms/Functions-----------------
-    
-#From 15-112 notes to read files
-#http://www.cs.cmu.edu/~112/notes/notes-strings.html#basicFileIO
-def readFile(path):
-    with open(path, "rt") as f:
-        return f.read()
-        
-#@TODO
-#Some bug in wavData transformtaion WORKINPROGRESS
-def changeFrequency(wavData,modulationAdder):
-    for i in range(len(wavData)):
-        wavData[i][0] = wavData[i][0]+modulationAdder
-    return wavData
-
-#Parse through CMU word dictionary
-def generateWordAndPronounceList():
-    fullString = readFile("cmudict.dict")
-    stringList = fullString.split("\n")
-    return stringList
-
-#Get random word from the dictionary
-def getRandomWordAndPronounce(wordList):
-    firstWord = "0"
-    while (not firstWord.isalpha()):
-        randomNumber = random.randint(0,len(wordList))
-        s = wordList[randomNumber]
-        index = s.find(" ")
-        firstWord = s[:index]
-    return s
-
-#Split the word and its pronounciation
-def getWordPronounceTuple(fullString):
-    index = fullString.find(" ")
-    if (index==-1):
-        return None
-    wordString = fullString[:index]
-    pronounceString = fullString[index+1:]
-    return (wordString,pronounceString)
-
-#Change stresses into either primary or secondary
-##############################Change to bold words ###########################
-def modifyPronounceStress(data):
-    temp = ""
-    for character in data.currentPronounce:
-        if character.isdigit():
-            if (character=="1"):
-                temp+="(PS)"
-            elif(character=="2"):
-                temp+="(SS)"
-            else:
-                temp+="(NS)"
-        else:
-            temp+=character
-    data.currentPronounceStress = temp
-
-
-
-def removeLeadingZeros(array):
-    for i in range(len(array)):
-        if not epsilonEqual(array[i],0.0,1):
-            newArray = numpy.asarray(array[i:])
-            break
-    return newArray
-
-def removeTrailingZeros(array):
-    for i in range(len(array)-1,-1,-1):
-        if not epsilonEqual(array[i],0.0,1):
-            newArray = numpy.asarray(array[:i+1])
-            break
-    return newArray
-
-#Get a random word an pronounce and AI speak it into a wav file
-def initiateWordandPronounce(data,flag=True):
-    if flag:
-        randomWordandPro = getRandomWordAndPronounce(data.allWordList)
-    else:
-        randomWordandPro = data.typedWord
-    (data.currentWord,data.currentPronounce)=getWordPronounceTuple(
-                                             randomWordandPro)
-    modifyPronounceStress(data)
-    stringToWav(data.currentWord,"artificialVoice.wav")
-
-#Initialize the graphs for both AI voice and user voice
-def initiateAnalysisGraph(data):
-    imageAI = ImageTk.PhotoImage(file="artificialVoice.png")
-    imageUser = ImageTk.PhotoImage(file="userVoice.png")
-    data.imageAI = imageAI
-    data.imageUser = imageUser
-    
-def loadImage(data):
-    imageIcon = ImageTk.PhotoImage(file="speakIcon.png")
-    imageScreenShot0 = ImageTk.PhotoImage(file="screenshot0.png")
-    imageScreenShot1 = ImageTk.PhotoImage(file="screenshot1.png")
-    data.imageIcon = imageIcon
-    data.imageScreenShot0 = imageScreenShot0
-    data.imageScreenShot1 = imageScreenShot1
-    
-    
-  
-#Get word only without pronounciation
-def getWordOnly(string):
-    firstSpaceIndex = string.find(" ")
-    return string[:firstSpaceIndex]
-
-#Since cmuDict is sorted by alphabet, can find quicker
-def searchForWord(data):
-    data.onlyWordList = list(map(getWordOnly,data.allWordList))
-    index = data.onlyWordList.index(data.entryString)
-    return index
-        
-    #binarySearchForWord(data,onlyWordList)    
-    
-
-def getEntryText(data):
-    data.entryString = data.entryText.get()
-    if (len(data.entryString.strip())==0):
-        return
-    else:
-        index = searchForWord(data)
-        if (index==-1):
-            return
-        else:
-            data.typedWord = data.allWordList[index]
-            initiateWordandPronounce(data,False)
-    data.entryText.delete(0,len(data.entryString))
-
-#Button call for Instruction screen
-def callInstruction(data):
-    data.originalScreen = data.screen
-    data.screen="instruction"
-
-#Button call to main screen
-def callBegin(data):
-    data.originalScreen = data.screen
-    data.screen="begin"
-    data.instructionButton.configure(bg="steel blue")
-    initiateWordandPronounce(data)
-
-#Button call for back
-def callBack(data):
-    if data.originalScreen == "welcome":
-        data.instructionButton.configure(bg="indian red")
-    (data.screen,data.originalScreen) = (data.originalScreen,data.screen)
-
-#Button call for pronounce screen
-def callPronounce(data):
-    data.originalScreen = data.screen
-    data.screen = "pronounce"
-    
-def getSlope(deltaX,y0,y1):
-    return abs(y0-y1)/float(deltaX)
-
-def epsilonEqual(val0,val1,epsilon):
-    if (abs(val0-val1)<epsilon):
-        return True
-    else:
-        return False
-
 def lengthOfMaxPeaks(wavFileName,peakIndexList):
     data = getWavData(wavFileName)
     sizeList = []
@@ -345,57 +188,7 @@ def lengthOfMaxPeaks(wavFileName,peakIndexList):
         sizeList.append(rightValue-leftValue)
     print("Main Equality",len(sizeList)==len(peakIndexList))
     return sizeList
-            
-#Button call to start recording
-#352kbps - AI
-#1411kbps - User
-def startRecording(canvas,data):
-    data.originalScreen = data.screen
-    data.recordButton.configure(bg="red")
-    canvas.delete(ALL)
-    redrawAll(canvas, data)
-    canvas.update()
-    data.recordButton.configure(bg="steel blue")
-    recordAudio(3,"userVoice.wav")
-    data.screen = "analysis"
-    makeGraph("artificialVoice.wav","artificialVoice.png")
-    makeGraph("userVoice.wav","userVoice.png")
-    #makeGraph("artificialVoice.wav","artificialVoice(fft).png",True)
-    #makeGraph("userVoice.wav","userVoice(fft).png",True)
-    data.numVowels = numberOfVowels(data,data.currentPronounce)
-    (data.numPeaksUser,data.indexListUser) = numOfPeaks(
-                                    getWavData("userVoice.wav"),
-                                            500000000,True)
-    #numPeaksUser-=1
-    print("____________________________")
-    (data.numPeaksAI,data.indexListAI) = numOfPeaks(getWavData(
-                                        "artificialVoice.wav"),
-                                        5000,False)
-    data.userVoiceSizeList = lengthOfMaxPeaks("userVoice.wav",
-                                              data.indexListUser)
-    data.artificialVoiceSizeList = lengthOfMaxPeaks("artificialVoice.wav",
-                                                    data.indexListAI)
-    for i in range(len(data.artificialVoiceSizeList)):
-        data.artificialVoiceSizeList[i]=data.artificialVoiceSizeList[i]*(float(
-        140000)/30000)
-    print(data.userVoiceSizeList)
-    print(data.artificialVoiceSizeList)
     
-    print("numVowel =",data.numVowels)
-    print("numPeaksUser =",data.numPeaksUser)
-    print("numPeaksAI =",data.numPeaksAI)
-    print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
-    determineSucess(data)
-    analysisMessage(data)
-    
-    
-def determineSucess(data):
-    word = recognizeText("userVoice.wav")   
-    data.success = False
-    if(word!=None and word==data.currentWord):
-        data.success = True
-    print("Success",data.success)
-        
 def subtractSameLenList(list0,list1):
     newList = []
     for i in range(len(list0)):
@@ -415,7 +208,7 @@ def numberOfSizeDiscrep(arrayList):
             indexList.append(index)
     print("Counter",counter)
     return (counter,indexList)
-
+    
 def analysisMessage(data):
     data.analysisMessage="Could not recognize the word."
     data.analysisMessage+="\nTry listening to the pronounciation again.\n"
@@ -499,361 +292,6 @@ def analysisMessage(data):
                     temp = removeDigits(temp)
                     data.analysisMessage+=temp
                     return
-                    
-def removeDigits(s):
-    newString = ""
-    for character in s:
-        if (not character.isdigit()):
-            newString+=character
-    return newString
-    
-#-------------------------------GUI Instructions------------------
-
-#Draw splash screen
-def drawWelcome(canvas,data):
-    fontSize = 60
-    heightScale = 0.2
-    heightMargin = data.height*heightScale
-    canvas.create_rectangle(0,0,data.width,data.height,fill="chocolate2")
-    canvas.create_text(data.width//2,data.height//2-heightMargin,
-                       text = "  Welcome to\nPronounciator!",
-                       font="MSerif %d" %(fontSize),
-                       anchor = S,fill="black")
-    canvas.create_window(0,data.height,window=data.instructionButton,anchor=SW)
-    canvas.create_window(data.width,data.height,window=data.beginButton,
-                         anchor=SE)
-    canvas.create_image(data.width/2,data.height/2-heightMargin/2,anchor=N,
-                        image=data.imageIcon)
-
-#Draw pronounce screen
-def drawPronounce(canvas,data):
-    fontSize = 50
-    fontSizePhones = 25
-    fontSizeScale = 30
-    heightScale = 0.75
-    yMargin = data.height*0.1
-    canvas.create_rectangle(0,0,data.width,data.height,fill="cadet blue")
-    canvas.create_text(data.width/2,0,text="Learn the Pronounciation",
-                       font = "MSerif %d" %(fontSize),anchor=N)
-    canvas.create_text(data.width/2,data.height/2,
-                       text=data.currentPronounceStress,
-                       font = "MSerif %d" %(fontSizePhones),anchor=S)
-    canvas.create_window(data.width//2,data.height,window=data.backButton,
-                         anchor=S)
-    canvas.create_window(data.width/2,data.height/2+yMargin,
-                         window=data.pronounceHearButton,
-                         anchor=N)
-    canvas.create_window(data.width/2,data.height*heightScale,anchor=N,
-                         window=data.pronounceScale)
-    canvas.create_text(data.width/2,data.height*heightScale+100,
-                       text="Adjust the scale to change the speed!",
-                       anchor=N,font = "MSerif %d" %(fontSizeScale))
-
-#@TODO properly
-#Draw instruction screen
-def drawInstruction(canvas,data):    
-    fontSize = 50
-    textSize = 20
-    heightScaleUpper = 0.25
-    heightScaleMiddle = 0.65
-    heightScaleLower=0.75
-    xMargin = data.width/float(80)
-    instructionText = "Instructions"
-    upperText = "Use the buttons to generate a random word or"
-    upperText+="\n         enter your own word in the text box."
-    middleText = "Go to the pronounciation page for help with "
-    middleText+="articulating the word."
-    lowerText = "Lastly press 'Start Recording' to record your own voice "
-    lowerText+= "and see how well you did!"
-    #actualInstructionText = upperText+"\n"+middleText+"\n"+lowerText
-    canvas.create_rectangle(0,0,data.width,data.height,fill="peachpuff")
-    canvas.create_text(data.width/2,0,text=instructionText,
-                       font="MSerif %d" %(fontSize),anchor=N)
-    canvas.create_text(data.width/2,data.height*heightScaleUpper,
-                       text=upperText,
-                       anchor=S,font = "MSerif %d" %(textSize))
-    canvas.create_text(data.width/2,data.height*heightScaleMiddle,
-                       text=middleText,
-                       anchor=S,font = "MSerif %d" %(textSize))
-    canvas.create_text(data.width/2,data.height*heightScaleLower,
-                       text=lowerText,
-                       anchor=S,font = "MSerif %d" %(textSize))
-    canvas.create_window(data.width//2,data.height,window=data.backButton,
-                         anchor=S)
-    canvas.create_image(xMargin,data.height/3,
-                        image=data.imageScreenShot0,
-                        anchor=NW)
-    canvas.create_image(data.width/2+xMargin*15,data.height/3,
-                        image=data.imageScreenShot1,
-                        anchor=N)
-
-def drawHelper(canvas,data):
-    fontSize = 25
-    canvas.create_text(data.width/2,0,text=data.helpMessage,
-                       font = "MSerif %d" %(fontSize),
-                       anchor=N)
-#@TODO Split into two
-#Draw main screen
-def drawBegin(canvas,data):
-    fontSizeInstruct = 40
-    fontSizeMainWord = 70
-    fontSizeEntry = 20
-    heightScale = 0.75
-    titleScale = 0.25
-    goHeightShift =100
-    yMargin = data.height/float(40)
-    beginText = "Clearly say the word below."
-    canvas.create_rectangle(0,0,data.width,data.height,fill="cadet blue")
-    canvas.create_text(data.width/2,data.height*titleScale,text=beginText,
-                       anchor=N,font="MSerif %d" %(fontSizeInstruct))
-    canvas.create_text(data.width/2,data.height/2,text=data.currentWord,
-                       anchor=S,font="MSerif %d" %(fontSizeMainWord),
-                       fill=data.wordColor)
-    canvas.create_window(0,data.height,window=data.instructionButton,
-                         anchor=SW)
-    canvas.create_window(data.width/2,data.height,window=data.welcomeBackButton
-                         ,anchor=S)
-    canvas.create_window(data.width,data.height,window=data.randomButton,
-                         anchor=SE)
-    canvas.create_window(data.width,data.height*heightScale,
-                             window=data.recordButton,anchor=NE)
-    canvas.create_window(0,data.height*heightScale,
-                         window = data.pronounceButton,anchor=NW)
-    canvas.create_text(data.width/2,data.height/2+yMargin,
-                       text="Entry Box",font="MSerif %d" %(fontSizeEntry),
-                       anchor=N)
-    canvas.create_window(data.width/2,data.height/2,window=data.entryText,
-                         anchor=N)
-    canvas.create_window(data.width/2,data.height/2+yMargin*2+goHeightShift,
-                         window = data.entryButtonGo)
-    
-    drawHelper(canvas,data)
-    
-#@TODO split into two
-#Draw analysis screen
-def drawAnalysis(canvas,data):
-    initiateAnalysisGraph(data)
-    fontSize = 40
-    lesserFontSize = 30
-    yMargin = data.height/float(20)
-    xMargin = data.width/float(10)
-    canvas.create_rectangle(0,0,data.width,data.height,fill="LavenderBlush3")
-    canvas.create_text(data.width/2,0,
-                       text="Analysis of your Prounciation is Complete!",
-                       font ="MSerif %d" %(fontSize),anchor=N)
-    canvas.create_text(data.width/2,3*data.height/4+yMargin,
-                       text=data.analysisMessage,
-                       font = "MSerif %d" %(lesserFontSize),anchor=S)
-    canvas.create_image(xMargin,data.height/2,image=data.imageAI,
-                        anchor=W)
-    canvas.create_image(data.width-xMargin,data.height/2,image=data.imageUser,
-                        anchor=E)
-    canvas.create_window(data.width//2,data.height,window=data.backButton,
-                         anchor=S)
-    canvas.create_window(xMargin,data.height/2-3*yMargin,
-                         window=data.analysisAIButton,anchor=SW)
-    canvas.create_window(data.width-xMargin,data.height/2-3*yMargin,
-                         window=data.analysisUserButton,anchor=SE)
-
-    
-def startPronounce(data):
-    playPronounciation(data)
-    
-def changeHelp(data,hoverBool,message=None):
-    if (hoverBool):
-        data.helpMessage = message
-    else:
-        data.helpMessage = data.helpMessageOriginal
-
-def callWelcomeBack(data):
-    data.screen="welcome"
-
-#@TODO reduce the length
-#initialize data and button
-def init(canvas,data):
-    data.screen = "welcome"
-    data.allWordList = generateWordAndPronounceList()
-    fontSize = 30
-    entryWidth = 50
-    data.wordColor = "black"
-    data.recording = False
-    data.entryTrigger = False
-    data.keepGoing = False
-    widthScale = 30
-    entryMessage = "Press this button to search for your custom word"
-    entryMessage+= " from the entry box."
-    instructMessage = "Press this button to go to the instruction page."
-    recordMessage = "Press this button to start recording your voice."
-    randomMessage = "Press this button to randomize the word on the screen."
-    backMessage = "Press this button to go back to the previous page."
-    pronounceMessage = "Press this button to go to the pronounciation page."
-    data.helpMessageOriginal = "Hover over each widget and look here for help!"
-    entryMessage = "Click to enter text here."
-    welcomeBackMessage = "Press here to return to the title screen."
-    loadImage(data)
-    data.scalePronounceBeforeValue = 1.0
-    data.helpMessage = data.helpMessageOriginal
-    data.instructionButton = Button(canvas,text = "Instructions",
-                             font = "MSerif %d" %(fontSize),
-                             command = lambda: callInstruction(data),
-                             bg="indian red",activebackground="firebrick")
-    data.instructionButton.bind("<Enter>",lambda event: changeHelp(data,True,
-                                                        instructMessage))
-    data.instructionButton.bind("<Leave>",lambda event: changeHelp(data,False,
-                                                        ))
-    data.beginButton = Button(canvas,text = "Begin!",
-                              font = "MSerif %d" %(fontSize),
-                              command = lambda: callBegin(data),
-                              bg="indian red",activebackground="firebrick")
-    data.backButton = Button(canvas,text="Back",font = "MSerif %d" %(fontSize),
-                             command = lambda: callBack(data),
-                             bg="dark slate gray")
-    data.welcomeBackButton = Button(canvas,text="Title Screen",
-                             font = "MSerif %d" %(fontSize),
-                             command = lambda: callWelcomeBack(data),
-                             bg="dark slate gray")
-    data.welcomeBackButton.bind("<Enter>",lambda event: changeHelp(data,True,
-                                                          welcomeBackMessage))
-    data.welcomeBackButton.bind("<Leave>",lambda event: changeHelp(data,False))
-    data.backButton.bind("<Enter>",lambda event: changeHelp(data,True,
-                                                        backMessage))
-    data.backButton.bind("<Leave>",lambda event: changeHelp(data,False,
-                                                        ))
-    data.randomButton = Button(canvas,text="Randomize",
-                               font="MSerif %d" %(fontSize),
-                               command=lambda: initiateWordandPronounce(data),
-                               bg="steel blue")
-    data.randomButton.bind("<Enter>",lambda event: changeHelp(data,True,
-                                                        randomMessage))
-    data.randomButton.bind("<Leave>",lambda event: changeHelp(data,False,
-                                                        ))
-    data.recordButton = Button(canvas,text="Start Recording!",
-                               font = "MSerif %d" %(fontSize),
-                               command = lambda: startRecording(canvas,data),
-                               bg = "steel blue")
-    data.recordButton.bind("<Enter>",lambda event: changeHelp(data,True,
-                                                        recordMessage))
-    data.recordButton.bind("<Leave>",lambda event: changeHelp(data,False,
-                                                        ))
-    data.pronounceButton = Button(canvas,text="Pronounciation",
-                                  font = "MSerif %d" %(fontSize),
-                                  command = lambda: callPronounce(data),
-                                  bg = "steel blue")
-    data.pronounceButton.bind("<Enter>",lambda event: changeHelp(data,True,
-                                                        pronounceMessage))
-    data.pronounceButton.bind("<Leave>",lambda event: changeHelp(data,False,))
-    data.entryButtonGo = Button(canvas,text="Search for word",
-                              font = "MSerif %d" %(fontSize),
-                              command = lambda: getEntryText(data),
-                              bg = "LightSteelBlue3")
-    data.entryButtonGo.bind("<Enter>",lambda event: changeHelp(data,True,
-                                                              entryMessage))
-    data.entryButtonGo.bind("<Leave>",lambda event: changeHelp(data,False))
-    data.pronounceHearButton = Button(canvas,
-                                      text="Listen to Phonetic Pronounciation",
-                                      font = "MSerif %d" %(fontSize),
-                                      command = lambda: startPronounce(data),
-                                      bg = "steel blue")
-    data.pronounceScale = Scale(canvas,from_=0.75,to=1.5,
-                         resolution=-1,orient=HORIZONTAL,
-                         width=widthScale,length=data.width/2,
-                         bg = "royal blue")
-    data.pronounceScale.set(1.0)
-    data.entryText = Entry(canvas,width=entryWidth)
-    data.entryText.configure(highlightbackground="dark blue",
-                                 highlightthickness=3)
-    data.entryText.bind("<Enter>",lambda event: changeHelp(data,True,
-                                                           entryMessage))
-    data.entryText.bind("<Leave>",lambda event: changeHelp(data,False))
-    data.analysisAIButton = Button(canvas,text="Artificial Voice",
-                                   command = lambda: 
-                                       playWav("artificialVoice.wav"),
-                                   bg = "PeachPuff3",
-                                   font = "MSerif %d" %(fontSize))
-    data.analysisUserButton = Button(canvas,text="Your Voice",
-                                     command = lambda:
-                                         playWav("userVoice.wav"),
-                                     font = "MSerif %d" %(fontSize),
-                                     bg="PeachPuff3")
-
-def mousePressed(event, data):
-    pass
-
-def keyPressed(event, data):
-    pass
-
-def timerFired(data):
-    newValue = float(data.pronounceScale.get())
-    #print(getBitRate("fullPhoneticSound.wav"))
-    if (data.recording):
-        data.counter+=1
-        if (data.counter%10==0):
-            data.countDown-=1
-        if (data.countDown==-1):
-            recordAudio(3,"userVoice.wav")
-            data.recording = not data.recording
-    if (data.screen=="pronounce" and
-        not epsilonEqual(data.scalePronounceBeforeValue,newValue,0.1)):
-        print("NewValue",newValue)
-        print("origingal",data.scalePronounceBeforeValue)
-        data.scalePronounceBeforeValue = newValue
-       # changeWavFileSpeed("fullPhoneticSound.wav",
-        #                   newValue)
-
-def redrawAll(canvas, data):
-    if (data.screen == "welcome"):
-        drawWelcome(canvas,data)
-    elif(data.screen == "instruction"):
-        drawInstruction(canvas,data)
-    elif(data.screen == "begin"):
-        drawBegin(canvas,data)
-    elif(data.screen == "analysis"):
-        drawAnalysis(canvas,data)
-    elif(data.screen == "pronounce"):
-        drawPronounce(canvas,data)
-        
-
-def run(width=300, height=300):
-    def redrawAllWrapper(canvas, data):
-        canvas.delete(ALL)
-        redrawAll(canvas, data)
-        canvas.update()    
-
-    def mousePressedWrapper(event, canvas, data):
-        mousePressed(event, data)
-        redrawAllWrapper(canvas, data)
-
-    def keyPressedWrapper(event, canvas, data):
-        keyPressed(event, data)
-        redrawAllWrapper(canvas, data)
-
-    def timerFiredWrapper(canvas, data):
-        timerFired(data)
-        redrawAllWrapper(canvas, data)
-        canvas.after(data.timerDelay, timerFiredWrapper, canvas, data)
-    class Struct(object): pass
-    data = Struct()
-    data.width = width
-    data.height = height
-    data.timerDelay = 100
-    root = Tk()
-    canvas = Canvas(root, width=data.width, height=data.height)
-    init(canvas,data)
-    canvas.pack()
-
-    root.bind("<Button-1>", lambda event:
-                            mousePressedWrapper(event, canvas, data))
-    root.bind("<Key>", lambda event:
-                            keyPressedWrapper(event, canvas, data))
-    timerFiredWrapper(canvas, data)
-    root.mainloop()
-    print("Closed!")
-    
-def initiateMain():
-    width = 1000
-    height = 1000
-    run(width,height)
-
 def isMaxOfSurrounding(wavData,index,userFlag):
     if (userFlag):
         offset = 2000
@@ -1011,10 +449,617 @@ def soundOutPhones(data,indexList):
         phoneticSoundIndex+=1
     createFullPhoneSound(data,phoneticSoundList)
     playWav("fullPhoneticSound.wav")
+
+#---------------------------Secondary Algorithms/Functions-----------------
+    
+#From 15-112 notes to read files
+#http://www.cs.cmu.edu/~112/notes/notes-strings.html#basicFileIO
+def readFile(path):
+    with open(path, "rt") as f:
+        return f.read()
+        
+def removeDigits(s):
+    newString = ""
+    for character in s:
+        if (not character.isdigit()):
+            newString+=character
+    return newString
+        
+#Slow down or speed up wave file depending on multiplier >1 or <1
+def changeWavFileSpeed(originalFileName,newFileName,multiplier):
+    data = getWavData(originalFileName)
+    bitRate = getBitRate(originalFileName)
+    newValue = int(bitRate*multiplier)
+    print(newValue)
+    writeWavFile(data,newFileName,newValue)
+        
+#Some bug in wavData transformtaion WORKINPROGRESS
+def changeFrequency(wavData,modulationAdder):
+    for i in range(len(wavData)):
+        wavData[i][0] = wavData[i][0]+modulationAdder
+    return wavData
+
+#Parse through CMU word dictionary
+def generateWordAndPronounceList():
+    fullString = readFile("cmudict.dict")
+    stringList = fullString.split("\n")
+    return stringList
+
+#Get random word from the dictionary
+def getRandomWordAndPronounce(wordList):
+    firstWord = "0"
+    while (not firstWord.isalpha()):
+        randomNumber = random.randint(0,len(wordList))
+        s = wordList[randomNumber]
+        index = s.find(" ")
+        firstWord = s[:index]
+    return s
+
+#Split the word and its pronounciation
+def getWordPronounceTuple(fullString):
+    index = fullString.find(" ")
+    if (index==-1):
+        return None
+    wordString = fullString[:index]
+    pronounceString = fullString[index+1:]
+    return (wordString,pronounceString)
+
+#Change stresses into either primary or secondary
+def modifyPronounceStress(data):
+    temp = ""
+    for character in data.currentPronounce:
+        if character.isdigit():
+            if (character=="1"):
+                temp+="(PS)"
+            elif(character=="2"):
+                temp+="(SS)"
+            else:
+                temp+="(NS)"
+        else:
+            temp+=character
+    data.currentPronounceStress = temp
+
+def removeLeadingZeros(array):
+    for i in range(len(array)):
+        if not epsilonEqual(array[i],0.0,1):
+            newArray = numpy.asarray(array[i:])
+            break
+    return newArray
+
+def removeTrailingZeros(array):
+    for i in range(len(array)-1,-1,-1):
+        if not epsilonEqual(array[i],0.0,1):
+            newArray = numpy.asarray(array[:i+1])
+            break
+    return newArray
+
+#Get a random word an pronounce and AI speak it into a wav file
+def initiateWordandPronounce(data,flag=True):
+    if flag:
+        randomWordandPro = getRandomWordAndPronounce(data.allWordList)
+    else:
+        randomWordandPro = data.typedWord
+    (data.currentWord,data.currentPronounce)=getWordPronounceTuple(
+                                             randomWordandPro)
+    modifyPronounceStress(data)
+    stringToWav(data.currentWord,"artificialVoice.wav")
+    
+def getSlope(deltaX,y0,y1):
+    return abs(y0-y1)/float(deltaX)
+
+def epsilonEqual(val0,val1,epsilon):
+    if (abs(val0-val1)<epsilon):
+        return True
+    else:
+        return False
+        
+def determineSucess(data):
+    word = recognizeText("userVoice.wav")   
+    data.success = False
+    if(word!=None and word==data.currentWord):
+        data.success = True
+    print("Success",data.success)
+    
+#--------------------Tkinter event or init calls----------------------------
+#Initialize the graphs for both AI voice and user voice
+def initiateAnalysisGraph(data):
+    imageAITime = ImageTk.PhotoImage(file="artificialVoice.png")
+    imageUserTime = ImageTk.PhotoImage(file="userVoice.png")
+    data.imageAITime = imageAITime
+    data.imageUserTime = imageUserTime
+    imageAIFreq = ImageTk.PhotoImage(file="artificialVoice(fft).png")
+    imageUserFreq = ImageTk.PhotoImage(file="userVoice(fft).png")
+    data.imageAIFreq = imageAIFreq
+    data.imageUserFreq = imageUserFreq
+    
+def loadImage(data):
+    imageIcon = ImageTk.PhotoImage(file="speakIcon.png")
+    imageScreenShot0 = ImageTk.PhotoImage(file="screenshot0.png")
+    imageScreenShot1 = ImageTk.PhotoImage(file="screenshot1.png")
+    data.imageIcon = imageIcon
+    data.imageScreenShot0 = imageScreenShot0
+    data.imageScreenShot1 = imageScreenShot1
+    
+#Get word only without pronounciation
+def getWordOnly(string):
+    firstSpaceIndex = string.find(" ")
+    return string[:firstSpaceIndex]
+
+#Since cmuDict is sorted by alphabet, can find quicker
+def searchForWord(data):
+    data.onlyWordList = list(map(getWordOnly,data.allWordList))
+    index = data.onlyWordList.index(data.entryString)
+    return index   
+
+def getEntryText(data):
+    data.entryString = data.entryText.get()
+    if (len(data.entryString.strip())==0):
+        return
+    else:
+        index = searchForWord(data)
+        if (index==-1):
+            return
+        else:
+            data.typedWord = data.allWordList[index]
+            initiateWordandPronounce(data,False)
+    data.entryText.delete(0,len(data.entryString))
+
+#Button call for Instruction screen
+def callInstruction(data):
+    data.originalScreen = data.screen
+    data.screen="instruction"
+
+#Button call to main screen
+def callBegin(data):
+    data.originalScreen = data.screen
+    data.screen="begin"
+    data.instructionButton.configure(bg="steel blue")
+    initiateWordandPronounce(data)
+
+#Button call for back
+def callBack(data):
+    if data.originalScreen == "welcome":
+        data.instructionButton.configure(bg="indian red")
+    (data.screen,data.originalScreen) = (data.originalScreen,data.screen)
+
+#Button call for pronounce screen
+def callPronounce(data):
+    data.originalScreen = data.screen
+    data.screen = "pronounce"
+            
+#Button call to start recording
+#352kbps - AI
+#1411kbps - User
+def startRecording(canvas,data):
+    data.originalScreen = data.screen
+    data.recordButton.configure(bg="red")
+    canvas.delete(ALL)
+    redrawAll(canvas, data)
+    canvas.update()
+    data.recordButton.configure(bg="steel blue")
+    recordAudio(3,"userVoice.wav")
+    data.screen = "analysis"
+    data.artificialFourier = numpy.fft.rfft(getWavData("artificialVoice.wav"))
+    data.userFourier = numpy.fft.rfft(getWavData("userVoice.wav"))
+    
+    makeGraph("artificialVoice.wav","artificialVoice.png")
+    makeGraph("userVoice.wav","userVoice.png")
+    makeGraph("artificialVoice.wav","artificialVoice(fft).png",True)
+    makeGraph("userVoice.wav","userVoice(fft).png",True)
+    data.numVowels = numberOfVowels(data,data.currentPronounce)
+    (data.numPeaksUser,data.indexListUser) = numOfPeaks(
+                                    getWavData("userVoice.wav"),
+                                            500000000,True)
+    #numPeaksUser-=1
+    print("____________________________")
+    (data.numPeaksAI,data.indexListAI) = numOfPeaks(getWavData(
+                                        "artificialVoice.wav"),
+                                        5000,False)
+    data.userVoiceSizeList = lengthOfMaxPeaks("userVoice.wav",
+                                              data.indexListUser)
+    data.artificialVoiceSizeList = lengthOfMaxPeaks("artificialVoice.wav",
+                                                    data.indexListAI)
+    for i in range(len(data.artificialVoiceSizeList)):
+        data.artificialVoiceSizeList[i]=data.artificialVoiceSizeList[i]*(float(
+        140000)/30000)
+    print(data.userVoiceSizeList)
+    print(data.artificialVoiceSizeList)
+    
+    print("numVowel =",data.numVowels)
+    print("numPeaksUser =",data.numPeaksUser)
+    print("numPeaksAI =",data.numPeaksAI)
+    determineSucess(data)
+    analysisMessage(data)
+
+def startPronounce(data):
+    playPronounciation(data)
+    
+def switchGraphState(data):
+    if (data.showTime):
+        data.graphSwitchButton.configure(text="Show Time Domain")
+        data.showTime = not data.showTime
+    else:
+        data.graphSwitchButton.configure(text="Show Frequency Domain")
+        data.showTime = not data.showTime
+    
+def changeHelp(data,hoverBool,message=None):
+    if (hoverBool):
+        data.helpMessage = message
+    else:
+        data.helpMessage = data.helpMessageOriginal
+
+def callWelcomeBack(data):
+    data.screen="welcome"
+
+
+    
+#-------------------------------GUI Instructions------------------
+
+#Draw splash screen
+def drawWelcome(canvas,data):
+    fontSize = 60
+    heightScale = 0.2
+    heightMargin = data.height*heightScale
+    canvas.create_rectangle(0,0,data.width,data.height,fill="chocolate2")
+    canvas.create_text(data.width//2,data.height//2-heightMargin,
+                       text = "  Welcome to\nPronounciator!",
+                       font="MSerif %d" %(fontSize),
+                       anchor = S,fill="black")
+    canvas.create_window(0,data.height,window=data.instructionButton,anchor=SW)
+    canvas.create_window(data.width,data.height,window=data.beginButton,
+                         anchor=SE)
+    canvas.create_image(data.width/2,data.height/2-heightMargin/2,anchor=N,
+                        image=data.imageIcon)
+
+#Draw pronounce screen
+def drawPronounce(canvas,data):
+    fontSize = 50
+    fontSizePhones = 25
+    fontSizeScale = 30
+    heightScale = 0.75
+    keyScale = 0.25
+    xMargin = 5
+    yMargin = data.height*0.1
+    keyText = "NS = No Stress\nPS = Primary Stress\nSS = Secondary Stress"
+    canvas.create_rectangle(0,0,data.width,data.height,fill="cadet blue")
+    canvas.create_text(data.width/2,0,text="Learn the Pronounciation",
+                       font = "MSerif %d" %(fontSize),anchor=N)
+    canvas.create_text(data.width/2,data.height/2,
+                       text=data.currentPronounceStress,
+                       font = "MSerif %d" %(fontSizePhones),anchor=S)
+    canvas.create_window(data.width//2,data.height,window=data.backButton,
+                         anchor=S)
+    canvas.create_window(data.width/2,data.height/2+yMargin,
+                         window=data.pronounceHearButton,
+                         anchor=N)
+    canvas.create_window(data.width/2,data.height*heightScale,anchor=N,
+                         window=data.pronounceScale)
+    canvas.create_text(data.width/2,data.height*heightScale+100,
+                       text="Adjust the scale to change the speed!",
+                       anchor=N,font = "MSerif %d" %(fontSizeScale))
+    canvas.create_text(xMargin,data.height*keyScale,text=keyText,
+                       font = "MSerif %d" %(fontSizePhones),anchor=W)
+
+#@TODO properly
+#Draw instruction screen
+def drawInstruction(canvas,data):    
+    fontSize = 50
+    textSize = 20
+    heightScaleUpper = 0.25
+    heightScaleMiddle = 0.65
+    heightScaleLower=0.75
+    xMargin = data.width/float(80)
+    instructionText = "Instructions"
+    upperText = "Use the buttons to generate a random word or"
+    upperText+="\n         enter your own word in the text box."
+    middleText = "Go to the pronounciation page for help with "
+    middleText+="articulating the word."
+    lowerText = "Lastly press 'Start Recording' to record your own voice "
+    lowerText+= "and see how well you did!"
+    #actualInstructionText = upperText+"\n"+middleText+"\n"+lowerText
+    canvas.create_rectangle(0,0,data.width,data.height,fill="peachpuff")
+    canvas.create_text(data.width/2,0,text=instructionText,
+                       font="MSerif %d" %(fontSize),anchor=N)
+    canvas.create_text(data.width/2,data.height*heightScaleUpper,
+                       text=upperText,
+                       anchor=S,font = "MSerif %d" %(textSize))
+    canvas.create_text(data.width/2,data.height*heightScaleMiddle,
+                       text=middleText,
+                       anchor=S,font = "MSerif %d" %(textSize))
+    canvas.create_text(data.width/2,data.height*heightScaleLower,
+                       text=lowerText,
+                       anchor=S,font = "MSerif %d" %(textSize))
+    canvas.create_window(data.width//2,data.height,window=data.backButton,
+                         anchor=S)
+    canvas.create_image(xMargin,data.height/3,
+                        image=data.imageScreenShot0,
+                        anchor=NW)
+    canvas.create_image(data.width/2+xMargin*15,data.height/3,
+                        image=data.imageScreenShot1,
+                        anchor=N)
+
+def drawHelper(canvas,data):
+    fontSize = 25
+    canvas.create_text(data.width/2,0,text=data.helpMessage,
+                       font = "MSerif %d" %(fontSize),
+                       anchor=N)
+#@TODO Split into two
+#Draw main screen
+def drawBegin(canvas,data):
+    fontSizeInstruct = 40
+    fontSizeMainWord = 70
+    fontSizeEntry = 20
+    heightScale = 0.75
+    titleScale = 0.25
+    goHeightShift =100
+    yMargin = data.height/float(40)
+    beginText = "Clearly say the word below."
+    canvas.create_rectangle(0,0,data.width,data.height,fill="cadet blue")
+    canvas.create_text(data.width/2,data.height*titleScale,text=beginText,
+                       anchor=N,font="MSerif %d" %(fontSizeInstruct))
+    canvas.create_text(data.width/2,data.height/2,text=data.currentWord,
+                       anchor=S,font="MSerif %d" %(fontSizeMainWord),
+                       fill=data.wordColor)
+    canvas.create_window(0,data.height,window=data.instructionButton,
+                         anchor=SW)
+    canvas.create_window(data.width/2,data.height,window=data.welcomeBackButton
+                         ,anchor=S)
+    canvas.create_window(data.width,data.height,window=data.randomButton,
+                         anchor=SE)
+    canvas.create_window(data.width,data.height*heightScale,
+                             window=data.recordButton,anchor=NE)
+    canvas.create_window(0,data.height*heightScale,
+                         window = data.pronounceButton,anchor=NW)
+    canvas.create_text(data.width/2,data.height/2+yMargin,
+                       text="Entry Box",font="MSerif %d" %(fontSizeEntry),
+                       anchor=N)
+    canvas.create_window(data.width/2,data.height/2,window=data.entryText,
+                         anchor=N)
+    canvas.create_window(data.width/2,data.height/2+yMargin*2+goHeightShift,
+                         window = data.entryButtonGo)
+    
+    drawHelper(canvas,data)
+    
+#@TODO split into two
+#Draw analysis screen
+def drawAnalysis(canvas,data):
+    initiateAnalysisGraph(data)
+    fontSize = 40
+    lesserFontSize = 30
+    yMargin = data.height/float(20)
+    xMargin = data.width/float(10)
+    if (data.showTime):
+        imageUser = data.imageUserTime
+        imageAI = data.imageAITime
+    else:
+        imageUser = data.imageUserFreq
+        imageAI = data.imageAIFreq
+        
+    canvas.create_rectangle(0,0,data.width,data.height,fill="LavenderBlush3")
+    canvas.create_text(data.width/2,0,
+                       text="Analysis of your Prounciation is Complete!",
+                       font ="MSerif %d" %(fontSize),anchor=N)
+    canvas.create_text(data.width/2,3*data.height/4+yMargin,
+                       text=data.analysisMessage,
+                       font = "MSerif %d" %(lesserFontSize),anchor=S)
+    canvas.create_image(xMargin,data.height/2,image=imageAI,
+                        anchor=W)
+    canvas.create_image(data.width-xMargin,data.height/2,image=imageUser,
+                        anchor=E)
+    canvas.create_window(data.width//2,data.height,window=data.backButton,
+                         anchor=S)
+    canvas.create_window(xMargin,data.height/2-3*yMargin,
+                         window=data.analysisAIButton,anchor=SW)
+    canvas.create_window(data.width-xMargin,data.height/2-3*yMargin,
+                         window=data.analysisUserButton,anchor=SE)
+    canvas.create_window(data.width/2,data.height/2-3*yMargin,
+                         window=data.graphSwitchButton,anchor=S)
+
+    
+
+
+#@TODO reduce the length
+#initialize data and button
+def init(canvas,data):
+    data.screen = "welcome"
+    data.allWordList = generateWordAndPronounceList()
+    fontSize = 30
+    toggleFontSize = 10
+    entryWidth = 50
+    data.wordColor = "black"
+    data.recording = False
+    data.entryTrigger = False
+    data.keepGoing = False
+    widthScale = 30
+    entryMessage = "Press this button to search for your custom word"
+    entryMessage+= " from the entry box."
+    instructMessage = "Press this button to go to the instruction page."
+    recordMessage = "Press this button to start recording your voice."
+    randomMessage = "Press this button to randomize the word on the screen."
+    backMessage = "Press this button to go back to the previous page."
+    pronounceMessage = "Press this button to go to the pronounciation page."
+    data.helpMessageOriginal = "Hover over each widget and look here for help!"
+    entryMessage = "Click to enter text here."
+    welcomeBackMessage = "Press here to return to the title screen."
+    loadImage(data)
+    data.scalePronounceBeforeValue = 1.0
+    data.showTime = True
+    data.helpMessage = data.helpMessageOriginal
+    data.instructionButton = Button(canvas,text = "Instructions",
+                             font = "MSerif %d" %(fontSize),
+                             command = lambda: callInstruction(data),
+                             bg="indian red",activebackground="firebrick")
+    data.instructionButton.bind("<Enter>",lambda event: changeHelp(data,True,
+                                                        instructMessage))
+    data.instructionButton.bind("<Leave>",lambda event: changeHelp(data,False,
+                                                        ))
+    data.beginButton = Button(canvas,text = "Begin!",
+                              font = "MSerif %d" %(fontSize),
+                              command = lambda: callBegin(data),
+                              bg="indian red",activebackground="firebrick")
+    data.backButton = Button(canvas,text="Back",font = "MSerif %d" %(fontSize),
+                             command = lambda: callBack(data),
+                             bg="dark slate gray")
+    data.welcomeBackButton = Button(canvas,text="Title Screen",
+                             font = "MSerif %d" %(fontSize),
+                             command = lambda: callWelcomeBack(data),
+                             bg="dark slate gray")
+    data.welcomeBackButton.bind("<Enter>",lambda event: changeHelp(data,True,
+                                                          welcomeBackMessage))
+    data.welcomeBackButton.bind("<Leave>",lambda event: changeHelp(data,False))
+    data.backButton.bind("<Enter>",lambda event: changeHelp(data,True,
+                                                        backMessage))
+    data.backButton.bind("<Leave>",lambda event: changeHelp(data,False,
+                                                        ))
+    data.randomButton = Button(canvas,text="Randomize",
+                               font="MSerif %d" %(fontSize),
+                               command=lambda: initiateWordandPronounce(data),
+                               bg="steel blue")
+    data.randomButton.bind("<Enter>",lambda event: changeHelp(data,True,
+                                                        randomMessage))
+    data.randomButton.bind("<Leave>",lambda event: changeHelp(data,False,
+                                                        ))
+    data.recordButton = Button(canvas,text="Start Recording!",
+                               font = "MSerif %d" %(fontSize),
+                               command = lambda: startRecording(canvas,data),
+                               bg = "steel blue")
+    data.recordButton.bind("<Enter>",lambda event: changeHelp(data,True,
+                                                        recordMessage))
+    data.recordButton.bind("<Leave>",lambda event: changeHelp(data,False,
+                                                        ))
+    data.pronounceButton = Button(canvas,text="Pronounciation",
+                                  font = "MSerif %d" %(fontSize),
+                                  command = lambda: callPronounce(data),
+                                  bg = "steel blue")
+    data.pronounceButton.bind("<Enter>",lambda event: changeHelp(data,True,
+                                                        pronounceMessage))
+    data.pronounceButton.bind("<Leave>",lambda event: changeHelp(data,False,))
+    data.entryButtonGo = Button(canvas,text="Search for word",
+                              font = "MSerif %d" %(fontSize),
+                              command = lambda: getEntryText(data),
+                              bg = "LightSteelBlue3")
+    data.entryButtonGo.bind("<Enter>",lambda event: changeHelp(data,True,
+                                                              entryMessage))
+    data.entryButtonGo.bind("<Leave>",lambda event: changeHelp(data,False))
+    data.pronounceHearButton = Button(canvas,
+                                      text="Listen to Phonetic Pronounciation",
+                                      font = "MSerif %d" %(fontSize),
+                                      command = lambda: startPronounce(data),
+                                      bg = "steel blue")
+    data.pronounceScale = Scale(canvas,from_=0.75,to=1.5,
+                         resolution=-1,orient=HORIZONTAL,
+                         width=widthScale,length=data.width/2,
+                         bg = "royal blue")
+    data.pronounceScale.set(1.0)
+    data.entryText = Entry(canvas,width=entryWidth)
+    data.entryText.configure(highlightbackground="dark blue",
+                                 highlightthickness=3)
+    data.entryText.bind("<Enter>",lambda event: changeHelp(data,True,
+                                                           entryMessage))
+    data.entryText.bind("<Leave>",lambda event: changeHelp(data,False))
+    data.analysisAIButton = Button(canvas,text="Artificial Voice",
+                                   command = lambda: 
+                                       playWav("artificialVoice.wav"),
+                                   bg = "PeachPuff3",
+                                   font = "MSerif %d" %(fontSize))
+    data.analysisUserButton = Button(canvas,text="Your Voice",
+                                     command = lambda:
+                                         playWav("userVoice.wav"),
+                                     font = "MSerif %d" %(fontSize),
+                                     bg="PeachPuff3")
+    data.graphSwitchButton = Button(canvas,text="Show Frequency Domain",
+                                    command = lambda: switchGraphState(data),
+                                    font = "MSerif %d" %(toggleFontSize),
+                                    bg = "PeachPuff3")
+
+def mousePressed(event, data):
+    pass
+
+def keyPressed(event, data):
+    pass
+
+def timerFired(data):
+    newValue = float(data.pronounceScale.get())
+    #print(getBitRate("fullPhoneticSound.wav"))
+    if (data.recording):
+        data.counter+=1
+        if (data.counter%10==0):
+            data.countDown-=1
+        if (data.countDown==-1):
+            recordAudio(3,"userVoice.wav")
+            data.recording = not data.recording
+    if (data.screen=="pronounce" and
+        not epsilonEqual(data.scalePronounceBeforeValue,newValue,0.1)):
+        print("NewValue",newValue)
+        print("origingal",data.scalePronounceBeforeValue)
+        data.scalePronounceBeforeValue = newValue
+       # changeWavFileSpeed("fullPhoneticSound.wav",
+        #                   newValue)
+
+def redrawAll(canvas, data):
+    if (data.screen == "welcome"):
+        drawWelcome(canvas,data)
+    elif(data.screen == "instruction"):
+        drawInstruction(canvas,data)
+    elif(data.screen == "begin"):
+        drawBegin(canvas,data)
+    elif(data.screen == "analysis"):
+        drawAnalysis(canvas,data)
+    elif(data.screen == "pronounce"):
+        drawPronounce(canvas,data)
         
 
-####THRESHOLD NUMBER IS 5000
+def run(width=300, height=300):
+    def redrawAllWrapper(canvas, data):
+        canvas.delete(ALL)
+        redrawAll(canvas, data)
+        canvas.update()    
 
+    def mousePressedWrapper(event, canvas, data):
+        mousePressed(event, data)
+        redrawAllWrapper(canvas, data)
+
+    def keyPressedWrapper(event, canvas, data):
+        keyPressed(event, data)
+        redrawAllWrapper(canvas, data)
+
+    def timerFiredWrapper(canvas, data):
+        timerFired(data)
+        redrawAllWrapper(canvas, data)
+        canvas.after(data.timerDelay, timerFiredWrapper, canvas, data)
+    class Struct(object): pass
+    data = Struct()
+    data.width = width
+    data.height = height
+    data.timerDelay = 100
+    root = Tk()
+    canvas = Canvas(root, width=data.width, height=data.height)
+    init(canvas,data)
+    canvas.pack()
+
+    root.bind("<Button-1>", lambda event:
+                            mousePressedWrapper(event, canvas, data))
+    root.bind("<Key>", lambda event:
+                            keyPressedWrapper(event, canvas, data))
+    timerFiredWrapper(canvas, data)
+    root.mainloop()
+    print("Closed!")
+    
+def initiateMain():
+    width = 1000
+    height = 1000
+    run(width,height)
+
+    
+#-------------------------------Test Functions-------------------------------
+
+#NOTE: Since project requires making graphs and wav files...lot of the tests
+#      were conducted in person by listening to each file and looking at graph
+#      results.
+
+#Testing peak detection algorithm accuracy of words with AI voice and number
+#of vowels...Do not run without slicing the list...dict is simply too big a 
+#file to process
 def testPeaks():
     fileText = readFile("cmudict.dict")
     wordList = fileText.split("\n")
@@ -1029,24 +1074,6 @@ def testPeaks():
         numberOfPeaks = numOfPeaks(data,5000)
         if (vowelCount - numberOfPeaks)<1:
             counter+=1
-    return 100*float(counter)/(float(len(wordList))/100)
-
+    return 100*float(counter)/(float(len(wordList))/100) #Usually around 98%
 
 initiateMain()
-
-#EDITEEEEED doesn't now write back file...returns data
-#Closing gap between the pronounciations
-#stringToWav("Hello","hello.wav")
-#stringToWav("World","world.wav")
-#data0 = getWavData("hello.wav")
-#removeTrailingZeros(data0,"hello.wav")
-#data0 = getWavData("hello.wav")
-#data1 = getWavData("world.wav")
-#removeLeadingZeros(data1,"world.wav")
-#data1 = getWavData("world.wav")
-#newData = numpy.concatenate((data0,data1))
-#writeWavFile(newData,"helloWorld.wav")
-
-
-
-    
