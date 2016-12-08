@@ -225,7 +225,7 @@ def analysisMessage(data):
             data.analysisMessage+= " perfectly!\nNow try another word!"
         else:            
             data.analysisMessage = (
-            "You are elongating or shortening certain vowels\nWork on these ")
+            "You are elongating or shortening certain vowels.\nWork on these ")
             print("Errorry indexList",indexList)
             print("Vowel List",data.vowelList)
             counter = 0
@@ -270,7 +270,7 @@ def analysisMessage(data):
                     numDiscrep,indexList = numberOfSizeDiscrep(
                                                         differenceSizeList)
                     data.analysisMessage = (
-                "You are elongating or shortening your vowels\nWork on these ")
+                "You are elongating or shortening your vowels.\nWork on these ")
                     counter = 0
                     temp = ""
                     print("Vowel List",data.vowelList)
@@ -418,19 +418,23 @@ def playPronounciation(data):
     for phonetic in listOfCurrentPronounce:
         index = onlyPhones.index(phonetic)
         indexList.append(index)
-    soundOutPhones(data,indexList)
+    soundOutPhones(data,indexList,True)
     #playWav("artificialVoice.wav")
     
     
-def createFullPhoneSound(data,arrayList):
-    arrayList.append(getWavData("artificialVoice.wav"))
+def createFullPhoneSound(data,arrayList,boolean):
+    if boolean:
+        arrayList.append(getWavData("artificialVoice.wav"))
+    else:
+        arrayList.append(getWavData("artificialVoiceSent.wav"))
     tupleOfPhones = tuple(arrayList)
     newData = numpy.concatenate(tupleOfPhones)
     writeWavFile(newData,"fullPhoneticSound.wav",
-                 data.scalePronounceBeforeValue*getBitRate("phoneticSound0.wav"))
+                 data.scalePronounceBeforeValue*getBitRate(
+                 "phoneticSound0.wav"))
 
     
-def soundOutPhones(data,indexList):
+def soundOutPhones(data,indexList,boolean):
     fullText = readFile("cmudict.phones")
     phoneticList = fullText.split("\n")
     phoneticSoundIndex = 0
@@ -447,7 +451,7 @@ def soundOutPhones(data,indexList):
         phoneticSoundList.append(wavData)
         writeWavFile(wavData,phoneFileName)
         phoneticSoundIndex+=1
-    createFullPhoneSound(data,phoneticSoundList)
+    createFullPhoneSound(data,phoneticSoundList,boolean)
     playWav("fullPhoneticSound.wav")
 
 #---------------------------Secondary Algorithms/Functions-----------------
@@ -588,13 +592,19 @@ def getWordOnly(string):
 #Since cmuDict is sorted by alphabet, can find quicker
 def searchForWord(data):
     data.onlyWordList = list(map(getWordOnly,data.allWordList))
-    index = data.onlyWordList.index(data.entryString)
-    return index   
+    try:
+        index = data.onlyWordList.index(data.entryString)
+        return index
+    except:
+        print("Didn't type anything!")
 
 def getEntryText(data):
     data.entryString = data.entryText.get()
     if (len(data.entryString.strip())==0):
         return
+    #if (" " in data.entryString):
+        #stringToWav(data.entryString,"tempSentence.wav")
+        #playWav("tempSentence.wav")
     else:
         index = searchForWord(data)
         if (index==-1):
@@ -609,6 +619,13 @@ def callInstruction(data):
     data.originalScreen = data.screen
     data.screen="instruction"
 
+def callSentence(data):
+    data.screen="sentences"
+    
+def callSentencePronounce(data):
+    data.originalScreen = data.screen
+    data.screen = "sentencesPronounce"
+    print("hit")
 #Button call to main screen
 def callBegin(data):
     data.originalScreen = data.screen
@@ -674,6 +691,47 @@ def startRecording(canvas,data):
 def startPronounce(data):
     playPronounciation(data)
     
+def pronounceSent(data):
+    print("Hello")
+    data.currentSentence = data.entryTextSent.get().lower()
+    if data.currentSentence == "":
+        return
+    sentenceList = data.currentSentence.split(" ")
+    
+    dictList = generateWordAndPronounceList()
+    onlyWord = []
+    stringToWav(data.currentSentence,"artificialVoiceSent.wav")
+    phoneticText = readFile("cmudict.phones")
+    phoneticList = phoneticText.split("\n")
+    for element in dictList:
+        noSpace = element.split(" ")
+        onlyWord.append(noSpace[0])
+    dictIndex = []
+    for word in sentenceList:
+        dictIndex.append(onlyWord.index(word))
+    pronounceList = []
+    for index in dictIndex:
+        pronounceList.append(dictList[index].split(" ")[1:])
+    print(pronounceList)
+    temp = ""
+    for indivPronounceList in pronounceList:
+        for fullThing in indivPronounceList:
+            for letter in fullThing:
+                if (not letter.isdigit()):
+                    temp+=letter
+            temp+=" "
+    temp = temp[:-1]
+    pronounceList = temp.split(" ")
+    onlyPhones = []
+    indexList = []
+    for line in phoneticList:
+        lineList = line.split("\t")
+        onlyPhones.append(lineList[0])        
+    for phonetic in pronounceList:
+        index = onlyPhones.index(phonetic)
+        indexList.append(index)
+    soundOutPhones(data,indexList,False)       
+    
 def switchGraphState(data):
     if (data.showTime):
         data.graphSwitchButton.configure(text="Show Time Domain")
@@ -702,12 +760,14 @@ def drawWelcome(canvas,data):
     heightMargin = data.height*heightScale
     canvas.create_rectangle(0,0,data.width,data.height,fill="chocolate2")
     canvas.create_text(data.width//2,data.height//2-heightMargin,
-                       text = "  Welcome to\nPronounciator!",
+                       text = "Welcome to SpeakIt!",
                        font="MSerif %d" %(fontSize),
                        anchor = S,fill="black")
     canvas.create_window(0,data.height,window=data.instructionButton,anchor=SW)
     canvas.create_window(data.width,data.height,window=data.beginButton,
                          anchor=SE)
+    canvas.create_window(data.width/2,data.height,window=data.sentenceButton,
+                         anchor=S)
     canvas.create_image(data.width/2,data.height/2-heightMargin/2,anchor=N,
                         image=data.imageIcon)
 
@@ -739,7 +799,10 @@ def drawPronounce(canvas,data):
                        anchor=N,font = "MSerif %d" %(fontSizeScale))
     canvas.create_text(xMargin,data.height*keyScale,text=keyText,
                        font = "MSerif %d" %(fontSizePhones),anchor=W)
-
+    
+    
+    
+    
 #@TODO properly
 #Draw instruction screen
 def drawInstruction(canvas,data):    
@@ -786,13 +849,14 @@ def drawHelper(canvas,data):
 #@TODO Split into two
 #Draw main screen
 def drawBegin(canvas,data):
+    drawBeginFirst(canvas,data)
+    drawBeginSecond(canvas,data)
+    drawHelper(canvas,data)
+    
+def drawBeginFirst(canvas,data):
     fontSizeInstruct = 40
     fontSizeMainWord = 70
-    fontSizeEntry = 20
-    heightScale = 0.75
     titleScale = 0.25
-    goHeightShift =100
-    yMargin = data.height/float(40)
     beginText = "Clearly say the word below."
     canvas.create_rectangle(0,0,data.width,data.height,fill="cadet blue")
     canvas.create_text(data.width/2,data.height*titleScale,text=beginText,
@@ -802,6 +866,12 @@ def drawBegin(canvas,data):
                        fill=data.wordColor)
     canvas.create_window(0,data.height,window=data.instructionButton,
                          anchor=SW)
+
+def drawBeginSecond(canvas,data):
+    fontSizeEntry = 20
+    heightScale = 0.75
+    goHeightShift =100
+    yMargin = data.height/float(40)
     canvas.create_window(data.width/2,data.height,window=data.welcomeBackButton
                          ,anchor=S)
     canvas.create_window(data.width,data.height,window=data.randomButton,
@@ -818,7 +888,48 @@ def drawBegin(canvas,data):
     canvas.create_window(data.width/2,data.height/2+yMargin*2+goHeightShift,
                          window = data.entryButtonGo)
     
+    
+def drawSentence(canvas,data):
+    drawSentenceFirst(canvas,data)
+    drawSentenceSecond(canvas,data)
     drawHelper(canvas,data)
+    
+def drawSentenceFirst(canvas,data):
+    fontSizeEntry = 20
+    yMargin = data.height/float(40)
+    fontSizePhones = 25
+    yMargin = data.height*0.1
+    canvas.create_rectangle(0,0,data.width,data.height,fill="cadet blue")
+    canvas.create_window(data.width/2,data.height,window=data.welcomeBackButton
+                         ,anchor=S)
+    canvas.create_text(data.width/2,data.height/2+yMargin,
+                       text="Entry Box",font="MSerif %d" %(fontSizeEntry),
+                       anchor=N)
+    canvas.create_window(data.width/2,data.height/2,window=data.entryTextSent,
+                         anchor=N)
+    canvas.create_text(data.width/2,data.height/2,
+                       text=data.currentSentence,
+                       font = "MSerif %d" %(fontSizePhones),anchor=S)
+
+def drawSentenceSecond(canvas,data):
+    heightScale = 0.75
+    yMargin = data.height/float(40)
+    fontSizePhones = 25
+    fontSizeScale = 30
+    heightScale = 0.75
+    keyScale = 0.25
+    xMargin = 5
+    yMargin = data.height*0.1
+    keyText = "NS = No Stress\nPS = Primary Stress\nSS = Secondary Stress"
+    canvas.create_text(data.width/2,data.height/2,
+                       text=data.currentSentence,
+                       font = "MSerif %d" %(fontSizePhones),anchor=S)
+    canvas.create_window(data.width//2,data.height,window=data.backButton,
+                         anchor=S)
+    canvas.create_window(data.width/2,data.height/2+yMargin,
+                         window=data.hearPronounceSentence,
+                         anchor=N)
+    
     
 #@TODO split into two
 #Draw analysis screen
@@ -826,8 +937,8 @@ def drawAnalysis(canvas,data):
     initiateAnalysisGraph(data)
     fontSize = 40
     lesserFontSize = 30
-    yMargin = data.height/float(20)
     xMargin = data.width/float(10)
+    yMargin = data.height/float(20)
     if (data.showTime):
         imageUser = data.imageUserTime
         imageAI = data.imageAITime
@@ -846,6 +957,12 @@ def drawAnalysis(canvas,data):
                         anchor=W)
     canvas.create_image(data.width-xMargin,data.height/2,image=imageUser,
                         anchor=E)
+    drawAnalysisRest(canvas,data)
+    
+
+def drawAnalysisRest(canvas,data):
+    xMargin = data.width/float(10)
+    yMargin = data.height/float(20)
     canvas.create_window(data.width//2,data.height,window=data.backButton,
                          anchor=S)
     canvas.create_window(xMargin,data.height/2-3*yMargin,
@@ -854,10 +971,7 @@ def drawAnalysis(canvas,data):
                          window=data.analysisUserButton,anchor=SE)
     canvas.create_window(data.width/2,data.height/2-3*yMargin,
                          window=data.graphSwitchButton,anchor=S)
-
     
-
-
 #@TODO reduce the length
 #initialize data and button
 def init(canvas,data):
@@ -882,6 +996,7 @@ def init(canvas,data):
     entryMessage = "Click to enter text here."
     welcomeBackMessage = "Press here to return to the title screen."
     loadImage(data)
+    data.currentSentence = ""
     data.scalePronounceBeforeValue = 1.0
     data.showTime = True
     data.helpMessage = data.helpMessageOriginal
@@ -893,7 +1008,7 @@ def init(canvas,data):
                                                         instructMessage))
     data.instructionButton.bind("<Leave>",lambda event: changeHelp(data,False,
                                                         ))
-    data.beginButton = Button(canvas,text = "Begin!",
+    data.beginButton = Button(canvas,text = "Words!",
                               font = "MSerif %d" %(fontSize),
                               command = lambda: callBegin(data),
                               bg="indian red",activebackground="firebrick")
@@ -904,6 +1019,10 @@ def init(canvas,data):
                              font = "MSerif %d" %(fontSize),
                              command = lambda: callWelcomeBack(data),
                              bg="dark slate gray")
+    data.sentenceButton = Button(canvas,text="Sentences!",
+                                 font= "MSerif %d" %(fontSize),
+                                 command = lambda: callSentence(data),
+                                 bg="indian red",activebackground="firebrick")
     data.welcomeBackButton.bind("<Enter>",lambda event: changeHelp(data,True,
                                                           welcomeBackMessage))
     data.welcomeBackButton.bind("<Leave>",lambda event: changeHelp(data,False))
@@ -933,7 +1052,16 @@ def init(canvas,data):
                                   bg = "steel blue")
     data.pronounceButton.bind("<Enter>",lambda event: changeHelp(data,True,
                                                         pronounceMessage))
-    data.pronounceButton.bind("<Leave>",lambda event: changeHelp(data,False,))
+    data.pronounceButton.bind("<Leave>",lambda event: changeHelp(data,False))
+    data.sentencePronounceButton = Button(canvas,text="Pronounciation",
+                                  font = "MSerif %d" %(fontSize),
+                                  command = lambda: callSentencePronounce(data)
+                                  ,bg = "steel blue")
+    data.sentencePronounceButton.bind("<Enter>",lambda event: 
+                                    changeHelp(data,True,
+                                                        pronounceMessage))
+    data.sentencePronounceButton.bind("<Leave>",lambda event: 
+                            changeHelp(data,False))
     data.entryButtonGo = Button(canvas,text="Search for word",
                               font = "MSerif %d" %(fontSize),
                               command = lambda: getEntryText(data),
@@ -957,6 +1085,12 @@ def init(canvas,data):
     data.entryText.bind("<Enter>",lambda event: changeHelp(data,True,
                                                            entryMessage))
     data.entryText.bind("<Leave>",lambda event: changeHelp(data,False))
+    data.entryTextSent = Entry(canvas,width=entryWidth)
+    data.entryTextSent.configure(highlightbackground="dark blue",
+                                 highlightthickness=3)
+    data.entryTextSent.bind("<Enter>",lambda event: changeHelp(data,True,
+                                                        "Type in a sentence"))
+    data.entryText.bind("<Leave>",lambda event: changeHelp(data,False))
     data.analysisAIButton = Button(canvas,text="Artificial Voice",
                                    command = lambda: 
                                        playWav("artificialVoice.wav"),
@@ -971,6 +1105,15 @@ def init(canvas,data):
                                     command = lambda: switchGraphState(data),
                                     font = "MSerif %d" %(toggleFontSize),
                                     bg = "PeachPuff3")
+    data.sentenceScale = Scale(canvas,from_=0.75,to=1.5,
+                         resolution=-1,orient=HORIZONTAL,
+                         width=widthScale,length=data.width/2,
+                         bg = "royal blue")
+    data.hearPronounceSentence = Button(canvas,
+                                      text="Listen to Phonetic Pronounciation",
+                                      font = "MSerif %d" %(fontSize),
+                                      command = lambda: pronounceSent(data),
+                                      bg = "steel blue")
 
 def mousePressed(event, data):
     pass
@@ -1007,6 +1150,10 @@ def redrawAll(canvas, data):
         drawAnalysis(canvas,data)
     elif(data.screen == "pronounce"):
         drawPronounce(canvas,data)
+    elif(data.screen == "sentences"):
+        drawSentence(canvas,data)
+    elif (data.screen == "sentencesPronounce"):
+        drawSentencePronounce(canvas,data)
         
 
 def run(width=300, height=300):
