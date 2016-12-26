@@ -1,1 +1,0 @@
-Listen to the originalRecordVoice.wav first then listen to each of the resulting audio

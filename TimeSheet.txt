@@ -19,3 +19,5 @@ Dec 3 Saturday - 4 hours
 Dec 4 Sunday - 8 hours
 Dec 5 Monday -  5 hours
 Dec 6 Tuesday - 6 hours
+Dec 7 Wednesday - 8 hours
+Dec 8 Thursday - 1.5 hours

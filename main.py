@@ -169,7 +169,7 @@ def lengthOfMaxPeaks(wavFileName,peakIndexList):
     for element in peakIndexList:
         startValue = element
         counter=0
-        for value in data[element-10:0:-5]:
+        for value in data[element-10:0:-5]: #Jump through left values
             counter+=1
             if epsilonEqual(getSlope(5,value,startValue),0,1):
                 print(element,"For Left at",element-counter)
@@ -178,7 +178,7 @@ def lengthOfMaxPeaks(wavFileName,peakIndexList):
             startValue = value
         startValue = element
         counter = 0
-        for value in data[element+10:len(data)-1:5]:
+        for value in data[element+10:len(data)-1:5]: #Right Values
             counter+=1
             if epsilonEqual(getSlope(5,value,startValue),0,1):
                 print(element,"For Right at",element+counter)
@@ -189,7 +189,7 @@ def lengthOfMaxPeaks(wavFileName,peakIndexList):
     print("Main Equality",len(sizeList)==len(peakIndexList))
     return sizeList
     
-def subtractSameLenList(list0,list1):
+def subtractSameLenList(list0,list1): #Assumes same length of list
     newList = []
     for i in range(len(list0)):
         newList.append(abs(list0[i]-list1[0]))
@@ -270,7 +270,7 @@ def analysisMessage(data):
                     numDiscrep,indexList = numberOfSizeDiscrep(
                                                         differenceSizeList)
                     data.analysisMessage = (
-                "You are elongating or shortening your vowels.\nWork on these ")
+            "You are elongating or shortening your vowels.\nWork on these ")
                     counter = 0
                     temp = ""
                     print("Vowel List",data.vowelList)
@@ -292,6 +292,7 @@ def analysisMessage(data):
                     temp = removeDigits(temp)
                     data.analysisMessage+=temp
                     return
+                    
 def isMaxOfSurrounding(wavData,index,userFlag):
     if (userFlag):
         offset = 2000
@@ -454,6 +455,47 @@ def soundOutPhones(data,indexList,boolean):
     createFullPhoneSound(data,phoneticSoundList,boolean)
     playWav("fullPhoneticSound.wav")
 
+def pronounceSent(data):
+    print("Hello")
+    data.currentSentence = data.entryTextSent.get().lower()
+    if data.currentSentence == "":
+        return
+    sentenceList = data.currentSentence.split(" ")
+    
+    dictList = generateWordAndPronounceList()
+    onlyWord = []
+    stringToWav(data.currentSentence,"artificialVoiceSent.wav")
+    phoneticText = readFile("cmudict.phones")
+    phoneticList = phoneticText.split("\n")
+    for element in dictList:
+        noSpace = element.split(" ")
+        onlyWord.append(noSpace[0])
+    dictIndex = []
+    for word in sentenceList:
+        dictIndex.append(onlyWord.index(word))
+    pronounceList = []
+    for index in dictIndex:
+        pronounceList.append(dictList[index].split(" ")[1:])
+    print(pronounceList)
+    temp = ""
+    for indivPronounceList in pronounceList:
+        for fullThing in indivPronounceList:
+            for letter in fullThing:
+                if (not letter.isdigit()):
+                    temp+=letter
+            temp+=" "
+    temp = temp[:-1]
+    pronounceList = temp.split(" ")
+    onlyPhones = []
+    indexList = []
+    for line in phoneticList:
+        lineList = line.split("\t")
+        onlyPhones.append(lineList[0])        
+    for phonetic in pronounceList:
+        index = onlyPhones.index(phonetic)
+        indexList.append(index)
+    soundOutPhones(data,indexList,False)
+    
 #---------------------------Secondary Algorithms/Functions-----------------
     
 #From 15-112 notes to read files
@@ -667,7 +709,7 @@ def startRecording(canvas,data):
     (data.numPeaksUser,data.indexListUser) = numOfPeaks(
                                     getWavData("userVoice.wav"),
                                             500000000,True)
-    #numPeaksUser-=1
+    #numPeaksUser-=1 In case microphone has faulty peak in beginning
     print("____________________________")
     (data.numPeaksAI,data.indexListAI) = numOfPeaks(getWavData(
                                         "artificialVoice.wav"),
@@ -690,47 +732,7 @@ def startRecording(canvas,data):
 
 def startPronounce(data):
     playPronounciation(data)
-    
-def pronounceSent(data):
-    print("Hello")
-    data.currentSentence = data.entryTextSent.get().lower()
-    if data.currentSentence == "":
-        return
-    sentenceList = data.currentSentence.split(" ")
-    
-    dictList = generateWordAndPronounceList()
-    onlyWord = []
-    stringToWav(data.currentSentence,"artificialVoiceSent.wav")
-    phoneticText = readFile("cmudict.phones")
-    phoneticList = phoneticText.split("\n")
-    for element in dictList:
-        noSpace = element.split(" ")
-        onlyWord.append(noSpace[0])
-    dictIndex = []
-    for word in sentenceList:
-        dictIndex.append(onlyWord.index(word))
-    pronounceList = []
-    for index in dictIndex:
-        pronounceList.append(dictList[index].split(" ")[1:])
-    print(pronounceList)
-    temp = ""
-    for indivPronounceList in pronounceList:
-        for fullThing in indivPronounceList:
-            for letter in fullThing:
-                if (not letter.isdigit()):
-                    temp+=letter
-            temp+=" "
-    temp = temp[:-1]
-    pronounceList = temp.split(" ")
-    onlyPhones = []
-    indexList = []
-    for line in phoneticList:
-        lineList = line.split("\t")
-        onlyPhones.append(lineList[0])        
-    for phonetic in pronounceList:
-        index = onlyPhones.index(phonetic)
-        indexList.append(index)
-    soundOutPhones(data,indexList,False)       
+           
     
 def switchGraphState(data):
     if (data.showTime):
@@ -1121,6 +1123,7 @@ def mousePressed(event, data):
 def keyPressed(event, data):
     pass
 
+#http://www.cs.cmu.edu/~112/notes/events-example0.py
 def timerFired(data):
     newValue = float(data.pronounceScale.get())
     #print(getBitRate("fullPhoneticSound.wav"))
@@ -1138,7 +1141,8 @@ def timerFired(data):
         data.scalePronounceBeforeValue = newValue
        # changeWavFileSpeed("fullPhoneticSound.wav",
         #                   newValue)
-
+       
+#http://www.cs.cmu.edu/~112/notes/events-example0.py
 def redrawAll(canvas, data):
     if (data.screen == "welcome"):
         drawWelcome(canvas,data)
@@ -1155,7 +1159,8 @@ def redrawAll(canvas, data):
     elif (data.screen == "sentencesPronounce"):
         drawSentencePronounce(canvas,data)
         
-
+#Modifed from notes
+#http://www.cs.cmu.edu/~112/notes/events-example0.py
 def run(width=300, height=300):
     def redrawAllWrapper(canvas, data):
         canvas.delete(ALL)
@@ -1211,7 +1216,8 @@ def testPeaks():
     fileText = readFile("cmudict.dict")
     wordList = fileText.split("\n")
     counter = 0
-    for line in wordList[3::100]:
+    step = 100
+    for line in wordList[3::step]:
         spaceIndex = line.find(" ")
         word = line[:spaceIndex]
         pronounciation = line[spaceIndex+1:]
@@ -1221,6 +1227,6 @@ def testPeaks():
         numberOfPeaks = numOfPeaks(data,5000)
         if (vowelCount - numberOfPeaks)<1:
             counter+=1
-    return 100*float(counter)/(float(len(wordList))/100) #Usually around 98%
+    return 100*float(counter)/(float(len(wordList))/step) #Usually around 98%
 
 initiateMain()
